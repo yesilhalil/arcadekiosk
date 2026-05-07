@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paradoks Kiosk - Galeri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-6">
+    <div class="text-center space-y-6">
+        <h1 class="text-4xl font-black tracking-tighter bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent italic">
+            PARADOKS KIOSK
+        </h1>
+        <div id="photo-container" class="hidden">
+            <img id="user-photo" class="rounded-2xl shadow-2xl border border-white/10 max-w-full h-auto mx-auto shadow-[0_0_50px_-12px_rgba(168,85,247,0.4)]">
+            <a id="download-btn" href="#" download="ai_art.jpg" class="mt-8 inline-block w-full py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform active:scale-95">
+                FOTOĞRAFI İNDİR
+            </a>
+        </div>
+        <p id="status" class="text-zinc-500 font-medium">Fotoğrafınız hazırlanıyor veya link hatalı...</p>
+    </div>
+
+    <script>
+        // URL'deki ?url= kısmını okuyoruz
+        const params = new URLSearchParams(window.location.search);
+        const photoUrl = params.get('url');
+
+        if (photoUrl) {
+            document.getElementById('user-photo').src = photoUrl;
+            document.getElementById('download-btn').href = photoUrl;
+            document.getElementById('photo-container').classList.remove('hidden');
+            document.getElementById('status').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
