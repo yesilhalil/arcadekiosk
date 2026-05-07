@@ -3,33 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paradoks Kiosk - Galeri</title>
+    <title>Paradoks Kiosk - AI Galeri</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
+        body { font-family: 'Outfit', sans-serif; }
+        
+        /* Cam Efekti (Glassmorphism) */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Neon Parlaması */
+        .neon-glow {
+            box-shadow: 0 0 50px -15px rgba(236, 72, 153, 0.5);
+        }
+    </style>
 </head>
-<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-6">
-    <div class="text-center space-y-6">
-        <h1 class="text-4xl font-black tracking-tighter bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent italic">
-            PARADOKS KIOSK
-        </h1>
-        <div id="photo-container" class="hidden">
-            <img id="user-photo" class="rounded-2xl shadow-2xl border border-white/10 max-w-full h-auto mx-auto shadow-[0_0_50px_-12px_rgba(168,85,247,0.4)]">
-            <a id="download-btn" href="#" download="ai_art.jpg" class="mt-8 inline-block w-full py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform active:scale-95">
-                FOTOĞRAFI İNDİR
-            </a>
+<body class="bg-[#0a0a0a] text-white min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden relative">
+
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse" style="animation-delay: 2s;"></div>
+
+    <div class="z-10 w-full max-w-md mx-auto text-center space-y-8">
+        
+        <div class="space-y-2">
+            <p class="text-pink-500 font-bold tracking-[0.3em] text-xs uppercase">Yapay Zeka Kabini</p>
+            <h1 class="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent">
+                PARADOKS KIOSK
+            </h1>
         </div>
-        <p id="status" class="text-zinc-500 font-medium">Fotoğrafınız hazırlanıyor veya link hatalı...</p>
+
+        <div id="loading-status" class="glass p-10 rounded-3xl animate-pulse flex flex-col items-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-pink-500 mb-4"></i>
+            <p class="text-zinc-300 font-medium">Başyapıtınız aranıyor...</p>
+        </div>
+
+        <div id="photo-container" class="hidden transform transition-all duration-700 translate-y-4 opacity-0">
+            <div class="glass p-2 rounded-3xl neon-glow mb-6 relative group">
+                <img id="user-photo" class="rounded-2xl w-full h-auto object-cover" alt="AI Üretimi Fotoğrafınız">
+                <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20">
+                    <p class="text-[10px] font-bold text-white/80"><i class="fa-solid fa-wand-magic-sparkles text-pink-400 mr-1"></i> AI Generated</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="downloadImage()" class="flex items-center justify-center gap-2 py-4 px-4 bg-white text-black font-bold rounded-2xl hover:bg-zinc-200 hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                    <i class="fa-solid fa-download text-lg"></i>
+                    <span>Kaydet</span>
+                </button>
+                
+                <button onclick="shareImage()" class="flex items-center justify-center gap-2 py-4 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-2xl hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(236,72,153,0.4)]">
+                    <i class="fa-regular fa-paper-plane text-lg"></i>
+                    <span>Paylaş</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // URL'deki ?url= kısmını okuyoruz
         const params = new URLSearchParams(window.location.search);
         const photoUrl = params.get('url');
 
         if (photoUrl) {
-            document.getElementById('user-photo').src = photoUrl;
-            document.getElementById('download-btn').href = photoUrl;
-            document.getElementById('photo-container').classList.remove('hidden');
-            document.getElementById('status').classList.add('hidden');
+            const img = document.getElementById('user-photo');
+            const container = document.getElementById('photo-container');
+            const loading = document.getElementById('loading-status');
+
+            img.src = photoUrl;
+            
+            // Görsel tamamen yüklendiğinde animasyonla ekrana getir
+            img.onload = () => {
+                loading.classList.add('hidden');
+                container.classList.remove('hidden');
+                
+                // Küçük bir gecikme ile yukarı kayarak belirme animasyonunu tetikle
+                setTimeout(() => {
+                    container.classList.remove('translate-y-4', 'opacity-0');
+                }, 50);
+            };
+        } else {
+            document.getElementById('loading-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"></i><p class="text-red-400">Görsel bulunamadı veya link hatalı.</p>';
+        }
+
+        // AKILLI PAYLAŞIM SİSTEMİ (WhatsApp, Insta, Airdrop vb.)
+        async function shareImage() {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Paradoks Kiosk',
+                        text: 'Paradoks Kiosk AI kabininde oluşturduğum fotoğrafıma bak! 🚀😎',
+                        url: photoUrl
+                    });
+                } catch (err) {
+                    console.log('Paylaşım penceresi kapatıldı.', err);
+                }
+            } else {
+                // Eğer telefon desteklemiyorsa linki kopyala
+                navigator.clipboard.writeText(photoUrl);
+                alert("Link kopyalandı! İstediğin yere yapıştırabilirsin.");
+            }
+        }
+
+        // AKILLI İNDİRME SİSTEMİ
+        async function downloadImage() {
+            try {
+                // Firebase linkini blob'a çevirip zorla indirtiyoruz (yeni sekmede açılmasın diye)
+                const response = await fetch(photoUrl);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'paradoks_ai_art.jpg';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                // Eğer CORS engeli olursa mecburen yeni sekmede aç
+                window.open(photoUrl, '_blank');
+            }
         }
     </script>
 </body>
