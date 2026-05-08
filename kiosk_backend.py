@@ -5,7 +5,7 @@ import serial
 import cv2
 import requests
 import threading
-from PIL import Image # Optimizasyon için gerekli, QR işlemleri silindi.
+from PIL import Image 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
@@ -38,11 +38,10 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
-# --- 2. SİSTEM DURUMLARI VE KİLİTLER ---
+# --- 2. SİSTEM DURUMLARI ---
 system_state = "IDLE" 
 is_processing_image = False 
 
-# PuLID + Schnell için optimize edilmiş stiller
 STYLES = {
     "1": {
         "name": "Cyberpunk",
@@ -71,17 +70,14 @@ def upload_to_firebase(image_path):
 
 def process_image_with_ai(image_path, stil_ayarlari):
     try:
-        # 1. OPTİMİZASYON
         img = Image.open(image_path)
         img.thumbnail((768, 768))
         opt_path = "static/opt_upload.jpg"
         img.save(opt_path, format="JPEG", quality=85)
         
-        # 2. REFERANS YÜKLEME
         print("☁️ Referans fotoğraf Fal.ai CDN'ine yükleniyor...")
         fal_image_url = fal_client.upload_file(opt_path)
 
-        # 3. HİBRİT ÜRETİM (PULID + FLUX SCHNELL)
         print(f"🚀 {stil_ayarlari['name']} stili PuLID + Schnell ile işleniyor...")
         fal_headers = {
             "Authorization": f"Key {FAL_KEY}",
@@ -98,7 +94,6 @@ def process_image_with_ai(image_path, stil_ayarlari):
             "keep_alive": 120 
         }
 
-        # PuLID Endpoint'i üzerinden Schnell motorunu çalıştırıyoruz
         response = requests.post(
             "https://fal.run/fal-ai/flux-pulid",
             headers=fal_headers,
@@ -112,7 +107,6 @@ def process_image_with_ai(image_path, stil_ayarlari):
         print("✅ Hibrit üretim tamamlandı!")
         image_url = response.json()["images"][0]["url"]
 
-        # 4. FIREBASE KAYIT VE LİNK OLUŞTURMA (QR İşlemleri Silindi)
         print("☁️ Sonuç Firebase'e arşivleniyor...")
         image_data = requests.get(image_url, timeout=15).content
         final_path = os.path.join("static", "paradoks_final.jpg")
@@ -123,11 +117,9 @@ def process_image_with_ai(image_path, stil_ayarlari):
         full_web_link = f"{VERCEL_SITE_URL}/?url={cloud_url}"
 
         print("🎉 İşlem başarıyla bitti!")
-        
-        # HTML'e iki farklı link gönderiyoruz
         return {
-            "display_url": f"/static/paradoks_final.jpg?v={time.time()}", # Ekranda hızlı göstermek için yerel resim
-            "qr_link": full_web_link # Müşterinin telefonunda açılacak Vercel sitesi
+            "display_url": f"/static/paradoks_final.jpg?v={time.time()}", 
+            "qr_link": full_web_link 
         }
 
     except Exception as e:
@@ -138,7 +130,7 @@ def process_image_with_ai(image_path, stil_ayarlari):
 def run_kiosk_process(buton_no):
     global system_state, is_processing_image
     try:
-        print("📸 Fotoğraf alınıyor...")
+        print("📸 Kameradan fotoğraf karesi (snapshot) çekiliyor...")
         resp = requests.get(SNAPSHOT_URL, timeout=5)
         if resp.status_code == 200:
             temp_capture = os.path.join("static", "temp_capture.jpg")
@@ -160,7 +152,7 @@ def run_kiosk_process(buton_no):
                 socketio.emit('state_update', {
                     'state': 'SHOWING',
                     'image_url': sonuclar["display_url"], 
-                    'qr_data': sonuclar["qr_link"]  # Vercel linkini arayüze fırlatıyoruz
+                    'qr_data': sonuclar["qr_link"]  
                 })
             else:
                 system_state = "IDLE"
@@ -172,11 +164,13 @@ def run_kiosk_process(buton_no):
     finally:
         is_processing_image = False 
 
-@socketio.on('flash_done')
-def handle_flash_done(data):
-    global is_processing_image
+# 🔥 YENİ: Arayüz 3-2-1 sayımını bitirince Python'a "şimdi çek" der
+@socketio.on('capture_now')
+def handle_capture_now(data):
+    global is_processing_image, system_state
     if not is_processing_image:
         is_processing_image = True
+        system_state = "PROCESSING"
         threading.Thread(target=run_kiosk_process, args=(data['buton_no'],)).start()
 
 def handle_arduino():
@@ -209,10 +203,11 @@ def handle_arduino():
                 ser.reset_input_buffer()
                 continue
             
+            # 🔥 YENİ: Butona basıldığında IDLE'dan COUNTDOWN'a geçer ve HTML'e sayımı başlat komutu atar
             if system_state == "IDLE" and kod in STYLES:
-                print(f"🎯 Buton {kod} basıldı. Flaş tetikleniyor...")
-                system_state = "PROCESSING"
-                socketio.emit('trigger_capture', {'buton_no': kod, 'style_name': STYLES[kod]['name']})
+                print(f"🎯 Buton {kod} basıldı. Geri sayım başlatılıyor...")
+                system_state = "COUNTDOWN"
+                socketio.emit('start_countdown', {'buton_no': kod, 'style_name': STYLES[kod]['name']})
                 last_action_time = current_time 
                 ser.reset_input_buffer()
         
@@ -224,5 +219,5 @@ def index():
 
 if __name__ == '__main__':
     threading.Thread(target=handle_arduino, daemon=True).start()
-    print("\n🚀 PARADOKS KIOSK AKTİF! (Hibrit PuLID + Schnell Modu)")
+    print("\n🚀 PARADOKS KIOSK AKTİF! (Geri Sayım Modu Devrede)")
     socketio.run(app, host="0.0.0.0", port=5000, debug=False)
