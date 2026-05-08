@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paradoks Arcade Kiosk</title>
+    <!-- Soket bağlantısı -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Arcade Fontları -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --arcade-cyan: #00ffff;
+            --arcade-magenta: #ff00ff;
+            --arcade-yellow: #ffea00;
+            --dark-bg: #0b001a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--dark-bg);
+            /* Retro 3D Grid Arka Plan */
+            background-image: 
+                linear-gradient(rgba(255, 0, 255, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 255, 0.15) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-position: center bottom;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Arka plan ızgarasını hareket ettirme animasyonu (GPU Hızlandırmalı) */
+        @keyframes moveGrid {
+            0% { transform: translateY(0) translateZ(0); }
+            100% { transform: translateY(50px) translateZ(0); }
+        }
+
+        .bg-anim {
+            position: absolute;
+            top: -50px; left: 0; width: 100%; height: calc(100% + 50px);
+            background-image: inherit;
+            background-size: inherit;
+            animation: moveGrid 3s linear infinite;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            position: absolute;
+            top: 0; left: 0;
+            padding: 2vh 0;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* --- BAŞLIKLAR VE METİNLER --- */
+        .title-arcade {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            color: var(--arcade-yellow);
+            text-shadow: 4px 4px 0px var(--arcade-magenta);
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        .insert-coin {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            color: var(--arcade-cyan);
+            animation: blink 1s step-end infinite;
+            margin: 0;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* --- CANLI AYNA (MODERN ARCADE) --- */
+        .mirror-container {
+            position: relative;
+            height: 60vh; 
+            max-width: 90vw;
+            aspect-ratio: 9/16; 
+            border: 4px solid var(--arcade-cyan);
+            border-radius: 15px; /* Yumuşak köşeler */
+            box-shadow: 0 0 20px var(--arcade-cyan), 0 0 40px var(--arcade-magenta) inset;
+            background-color: #000;
+            overflow: hidden;
+            transform: translateZ(0); 
+        }
+
+        #live-stream {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1) translateZ(0); 
+        }
+
+        /* Basit Odak Kareleri (Kasmayan) */
+        .focus-box {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%; height: 50%;
+            border: 2px dashed rgba(255, 234, 0, 0.6);
+            border-radius: 20px;
+            z-index: 3;
+        }
+
+        /* --- İŞLENİYOR EKRANI --- */
+        .loading-bar-container {
+            width: 60%;
+            height: 30px;
+            border: 3px solid var(--arcade-cyan);
+            border-radius: 15px;
+            padding: 3px;
+            background: rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--arcade-cyan), var(--arcade-magenta));
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        #dynamic-text {
+            font-size: 1.5rem;
+            color: white;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--arcade-magenta);
+        }
+
+        .style-badge {
+            padding: 10px 20px;
+            background: var(--arcade-magenta);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            border-radius: 5px;
+            border: 2px solid white;
+        }
+
+        /* --- SONUÇ VE QR EKRANI (TEMİZ TASARIM) --- */
+        .result-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            height: 80vh;
+            width: 100%;
+        }
+
+        #result-image {
+            max-height: 55vh;
+            border: 4px solid white;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #result-image.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Yeni QR Kod Kutusu */
+        .qr-card {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--arcade-yellow);
+        }
+
+        .qr-text {
+            color: black;
+            text-align: left;
+        }
+
+        .qr-text h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+            color: var(--arcade-magenta);
+            font-weight: 800;
+        }
+
+        .qr-text p {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        #qr-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 5px;
+        }
+
+        #flash-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-anim"></div>
+    <div id="flash-overlay"></div>
+
+    <!-- 1. BEKLEME & CANLI AYNA -->
+    <div id="idle-screen" class="screen active">
+        <h1 class="title-arcade">PARADOKS</h1>
+        
+        <div class="mirror-container">
+            <img id="live-stream" src="http://192.168.1.127:8080/video" alt="Kamera Bekleniyor">
+            <div class="focus-box"></div>
+        </div>
+
+        <p class="insert-coin">STİL SEÇ VE BAŞLA</p>
+    </div>
+
+    <!-- 2. İŞLEM EKRANI -->
+    <div id="processing-screen" class="screen">
+        <div id="selected-style-display" class="style-badge">STİL: BEKLENİYOR...</div>
+        
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div class="loading-bar-container">
+                <div class="loading-bar" id="progress-bar"></div>
+            </div>
+            <div id="dynamic-text">SİSTEM BAŞLATILIYOR...</div>
+        </div>
+    </div>
+
+    <!-- 3. SONUÇ EKRANI (RESİM VE QR) -->
+    <div id="showing-screen" class="screen">
+        <h2 class="title-arcade" style="font-size: 1.5rem; text-shadow: 2px 2px 0px var(--arcade-cyan);">LEVEL COMPLETE</h2>
+        
+        <div class="result-layout">
+            <img id="result-image" src="" alt="Paradoks Sonuç">
+            
+            <!-- TEMİZ QR KUTUSU -->
+            <div class="qr-card">
+                <img id="qr-image" src="" alt="QR Kod">
+                <div class="qr-text">
+                    <h3>FOTOĞRAFINI AL</h3>
+                    <p>Kameranı aç ve barkodu<br>okutarak hemen indir.</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="insert-coin" style="color: white; text-shadow: none;">ANA MENÜ İÇİN BUTONA BAS</p>
+    </div>
+
+    <script>
+        const socket = io();
+
+        const idleScreen = document.getElementById('idle-screen');
+        const processingScreen = document.getElementById('processing-screen');
+        const showingScreen = document.getElementById('showing-screen');
+        const resultImage = document.getElementById('result-image');
+        const qrImage = document.getElementById('qr-image');
+        const dynamicText = document.getElementById('dynamic-text');
+        const styleDisplay = document.getElementById('selected-style-display');
+        const flashOverlay = document.getElementById('flash-overlay');
+        const progressBar = document.getElementById('progress-bar');
+
+        const loadingMessages = [
+            "JETON ONAYLANDI...",
+            "PİKSELLER YÜKLENİYOR...",
+            "YAPAY ZEKA DEVREDE...",
+            "RENK PALETİ SEÇİLİYOR...",
+            "SON RÖTUŞLAR..."
+        ];
+        
+        let messageInterval;
+        let progressInterval;
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Arcade tarzı dolum çubuğu ve metinler
+        function startLoadingShow() {
+            let i = 0;
+            let percent = 0;
+            
+            dynamicText.innerText = loadingMessages[0];
+            progressBar.style.width = "0%";
+
+            messageInterval = setInterval(() => {
+                i = (i + 1) % loadingMessages.length;
+                dynamicText.innerText = loadingMessages[i];
+            }, 2000); 
+
+            // Tahmini 12-15 saniyede %90'a ulaşan sahte yükleme çubuğu
+            progressInterval = setInterval(() => {
+                if(percent < 90) {
+                    percent += Math.random() * 5 + 2;
+                    if(percent > 90) percent = 90;
+                    progressBar.style.width = percent + "%";
+                }
+            }, 500);
+        }
+
+        function stopLoadingShow() {
+            clearInterval(messageInterval);
+            clearInterval(progressInterval);
+        }
+
+        function triggerFlash() {
+            flashOverlay.style.opacity = '1';
+            setTimeout(() => { flashOverlay.style.opacity = '0'; }, 150);
+        }
+
+        socket.on('trigger_capture', function(data) {
+            styleDisplay.innerText = "SEÇİM: " + data.style_name.toUpperCase();
+            triggerFlash();
+
+            setTimeout(() => {
+                switchScreen('processing-screen');
+                startLoadingShow();
+                socket.emit('flash_done', { buton_no: data.buton_no });
+            }, 200);
+        });
+
+        socket.on('state_update', function(data) {
+            if (data.state === 'IDLE') {
+                stopLoadingShow();
+                resultImage.classList.remove('loaded');
+                resultImage.src = "";
+                qrImage.src = "";
+                switchScreen('idle-screen');
+            } 
+            else if (data.state === 'SHOWING') {
+                stopLoadingShow();
+                progressBar.style.width = "100%"; // Çubuğu fulle
+                
+                setTimeout(() => {
+                    switchScreen('showing-screen');
+                    
+                    // 1. Resmi Yükle
+                    resultImage.src = data.image_url;
+                    resultImage.onload = function() {
+                        resultImage.classList.add('loaded');
+                    }
+
+                    // 2. TERTEMİZ QR KODU OLUŞTUR (Harici ücretsiz API kullanarak)
+                    // URL'yi encodeURIComponent ile güvenli hale getiriyoruz.
+                    const safeUrl = encodeURIComponent(data.qr_data);
+                    qrImage.src = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + safeUrl;
+
+                }, 500); // 100% animasyonunu görmesi için yarım saniye bekle
+            }
+        });
+    </script>
+</body>
+</html>

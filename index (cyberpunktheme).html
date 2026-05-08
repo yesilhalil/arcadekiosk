@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paradoks Kiosk - Canlı Ayna</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-pink: #ff007f;
+            --neon-blue: #00f3ff;
+            --dark-bg: #050505;
+            --hud-color: rgba(0, 243, 255, 0.7);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            /* Öğeleri ekrana eşit dağıtarak üst üste binmeyi engeller */
+            justify-content: space-evenly; 
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            padding: 2vh 0; /* Üstten ve alttan nefes alma payı */
+        }
+
+        .screen.active {
+            display: flex;
+            opacity: 1;
+            z-index: 10;
+        }
+
+        /* --- CANLI AYNA (LIVE MIRROR) & HUD --- */
+        .mirror-container {
+            position: relative;
+            /* Genişlik yerine yüksekliği baz al. Ekranın en fazla %65'ini kaplasın */
+            height: 65vh; 
+            max-width: 95vw;
+            aspect-ratio: 9/16; 
+            border: 2px solid var(--hud-color);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.2);
+            background-color: #111;
+            overflow: hidden;
+            /* GPU Hızlandırmayı tetikle (Kasılmayı önler) */
+            transform: translateZ(0); 
+            will-change: transform;
+        }
+
+        #live-stream {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Aynalama efekti ve GPU zorlaması */
+            transform: scaleX(-1) translateZ(0); 
+            will-change: transform;
+        }
+
+        /* Tarama Çizgileri (Scanlines) Efekti */
+.scanlines {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            /* Ekran kartını yormayan, basit donanımsal CRT çizgisi */
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            pointer-events: none;
+            z-index: 2;
+            transform: translateZ(0); 
+        }
+
+        /* HUD Köşebentleri */
+        .hud-corner {
+            position: absolute;
+            width: 10%; /* Piksel yerine yüzde kullanarak her ekrana uyumlu yaptık */
+            aspect-ratio: 1/1;
+            max-width: 40px;
+            border-color: var(--hud-color);
+            border-style: solid;
+            z-index: 3;
+        }
+        .top-left { top: 15px; left: 15px; border-width: 3px 0 0 3px; }
+        .top-right { top: 15px; right: 15px; border-width: 3px 3px 0 0; }
+        .bottom-left { bottom: 15px; left: 15px; border-width: 0 0 3px 3px; }
+        .bottom-right { bottom: 15px; right: 15px; border-width: 0 3px 3px 0; }
+
+        /* Yüz Odaklama Nişangahı */
+        .crosshair {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40%;
+            height: 45%;
+            max-width: 180px;
+            max-height: 240px;
+            /* Border parlaklığını azalttık, maviye çevirdik */
+            border: 1px dashed rgba(0, 243, 255, 0.5); 
+            border-radius: 50%;
+            z-index: 3;
+            /* 🔥 Animasyonu tamamen kaldırdık! GPU rahat bir nefes aldı. */
+        }
+        .crosshair::after {
+            content: "YÜZÜNÜZÜ HİZALAYIN";
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: var(--neon-blue); /* Uyumlu olması için mavi yaptık */
+            white-space: nowrap;
+            letter-spacing: 2px;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); border-color: rgba(255, 0, 127, 0.3); }
+            50% { transform: translate(-50%, -50%) scale(1.05); border-color: rgba(255, 0, 127, 0.8); }
+        }
+
+        /* --- BAŞLIK VE METİNLER --- */
+        .title-glow {
+            font-size: clamp(2rem, 5vw, 4rem); /* Ekrana göre küçülüp büyür */
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            letter-spacing: 5px;
+            margin: 0;
+        }
+
+        .pulse-text {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: var(--neon-pink);
+            animation: pulse 1.5s infinite alternate;
+            text-shadow: 0 0 10px var(--neon-pink);
+            letter-spacing: 2px;
+            margin: 0;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* --- İŞLENİYOR (PROCESSING) EKRANI --- */
+        .loader-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+
+        .cyber-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top-color: var(--neon-blue);
+            border-bottom-color: var(--neon-pink);
+            animation: spin 2s linear infinite;
+        }
+
+        .cyber-ring::before {
+            content: '';
+            position: absolute;
+            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-left-color: var(--neon-pink);
+            border-right-color: var(--neon-blue);
+            animation: spin 1.5s linear infinite reverse;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #dynamic-text {
+            font-size: 1.5rem;
+            color: white;
+            text-shadow: 0 0 8px white;
+            margin: 10px 0;
+            min-height: 40px;
+        }
+
+        .style-badge {
+            padding: 5px 15px;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            border-radius: 20px;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        /* --- GÖSTERİM (SHOWING) EKRANI --- */
+        #result-image {
+            max-width: 90vw;
+            max-height: 80vh;
+            border: 5px solid var(--neon-blue);
+            box-shadow: 0 0 30px var(--neon-blue);
+            border-radius: 10px;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #result-image.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .return-text {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            color: #888;
+            animation: pulse 2s infinite alternate;
+        }
+
+        /* Flaş Efekti İçin Tam Ekran Div */
+        #flash-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 0.1s ease-out;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="flash-overlay"></div>
+
+    <div id="idle-screen" class="screen active">
+        <div class="title-glow">PARADOKS</div>
+        
+        <div class="mirror-container">
+            <div class="scanlines"></div>
+            <img id="live-stream" src="http://192.168.1.127:8080/video" alt="Kamera Bağlanıyor...">
+            
+            <div class="hud-corner top-left"></div>
+            <div class="hud-corner top-right"></div>
+            <div class="hud-corner bottom-left"></div>
+            <div class="hud-corner bottom-right"></div>
+            
+            <div class="crosshair"></div>
+        </div>
+
+        <div class="pulse-text">STİL SEÇ VE BUTONA BAS</div>
+    </div>
+
+    <div id="processing-screen" class="screen">
+        <div id="selected-style-display" class="style-badge">STİL: BEKLENİYOR...</div>
+        <div class="loader-container">
+            <div class="cyber-ring"></div>
+        </div>
+        <div id="dynamic-text">Sistem başlatılıyor...</div>
+    </div>
+
+    <div id="showing-screen" class="screen">
+        <img id="result-image" src="" alt="Paradoks Final">
+        <div class="return-text">Ana menüye dönmek için butona basın.</div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        const idleScreen = document.getElementById('idle-screen');
+        const processingScreen = document.getElementById('processing-screen');
+        const showingScreen = document.getElementById('showing-screen');
+        const resultImage = document.getElementById('result-image');
+        const dynamicText = document.getElementById('dynamic-text');
+        const styleDisplay = document.getElementById('selected-style-display');
+        const flashOverlay = document.getElementById('flash-overlay');
+
+        const loadingMessages = [
+            "Biyometrik veriler analiz ediliyor...",
+            "Yüz hatları haritalanıyor...",
+            "Yapay zeka fırçaları hazırlanıyor...",
+            "Stil parametreleri uygulanıyor...",
+            "Doku ve ışıklandırma hesaplanıyor...",
+            "Son rötuşlar atılıyor..."
+        ];
+        
+        let messageInterval;
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startLoadingTextShow() {
+            let i = 0;
+            dynamicText.innerText = loadingMessages[0];
+            messageInterval = setInterval(() => {
+                i = (i + 1) % loadingMessages.length;
+                dynamicText.innerText = loadingMessages[i];
+            }, 2500); 
+        }
+
+        function stopLoadingTextShow() {
+            clearInterval(messageInterval);
+        }
+
+        function triggerFlash() {
+            flashOverlay.style.opacity = '1';
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+            }, 150);
+        }
+
+        socket.on('trigger_capture', function(data) {
+            styleDisplay.innerText = "SEÇİLEN STİL: " + data.style_name.toUpperCase();
+            triggerFlash();
+
+            setTimeout(() => {
+                switchScreen('processing-screen');
+                startLoadingTextShow();
+                socket.emit('flash_done', { buton_no: data.buton_no });
+            }, 200);
+        });
+
+        socket.on('state_update', function(data) {
+            if (data.state === 'IDLE') {
+                stopLoadingTextShow();
+                resultImage.classList.remove('loaded');
+                resultImage.src = "";
+                switchScreen('idle-screen');
+            } 
+            else if (data.state === 'SHOWING') {
+                stopLoadingTextShow();
+                switchScreen('showing-screen');
+                
+                resultImage.src = data.image_url;
+                resultImage.onload = function() {
+                    resultImage.classList.add('loaded');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,131 +2,227 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paradoks Kiosk - AI Galeri</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
+    <!-- Kiosk ile aynı Arcade Fontları -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        
-        /* Cam Efekti (Glassmorphism) */
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        :root {
+            --arcade-cyan: #00ffff;
+            --arcade-magenta: #ff00ff;
+            --arcade-yellow: #ffea00;
+            --dark-bg: #0b001a;
         }
-        
-        /* Neon Parlaması */
-        .neon-glow {
-            box-shadow: 0 0 50px -15px rgba(236, 72, 153, 0.5);
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            min-height: 100vh;
+            background-color: var(--dark-bg);
+            /* Retro 3D Grid Arka Plan */
+            background-image: 
+                linear-gradient(rgba(255, 0, 255, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 255, 0.15) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center bottom;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        /* Arka plan ızgarasını hareket ettirme animasyonu */
+        @keyframes moveGrid {
+            0% { transform: translateY(0) translateZ(0); }
+            100% { transform: translateY(40px) translateZ(0); }
+        }
+
+        .bg-anim {
+            position: fixed; /* Mobilde scroll yaparken arka plan kaymasın */
+            top: -40px; left: 0; width: 100%; height: calc(100% + 40px);
+            background-image: inherit;
+            background-size: inherit;
+            animation: moveGrid 3s linear infinite;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 5vh;
+            padding-bottom: 5vh;
+            z-index: 10;
+        }
+
+        /* --- BAŞLIKLAR --- */
+        .title-arcade {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.5rem;
+            color: var(--arcade-yellow);
+            text-shadow: 3px 3px 0px var(--arcade-magenta);
+            margin-bottom: 10px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .subtitle {
+            color: var(--arcade-cyan);
+            font-size: 1rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--arcade-cyan);
+            letter-spacing: 1px;
+        }
+
+        /* --- FOTOĞRAF KUTUSU --- */
+        .image-frame {
+            width: 100%;
+            border: 4px solid var(--arcade-cyan);
+            border-radius: 15px;
+            box-shadow: 0 0 20px var(--arcade-cyan), 0 0 40px var(--arcade-magenta) inset;
+            background-color: #000;
+            padding: 5px;
+            box-sizing: border-box;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        #user-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Yükleniyor animasyonu */
+        .loading-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            color: var(--arcade-magenta);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* --- İNDİRME BUTONU --- */
+        .btn-download {
+            background: linear-gradient(90deg, var(--arcade-magenta), #cc00cc);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            border: 2px solid white;
+            border-radius: 30px;
+            box-shadow: 0 0 15px var(--arcade-magenta);
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-download:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 30px var(--arcade-magenta);
+        }
+
+        /* İndirme ikonu (SVG) */
+        .download-icon {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .hint {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #aaa;
+            text-align: center;
+            line-height: 1.5;
         }
     </style>
 </head>
-<body class="bg-[#0a0a0a] text-white min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden relative">
+<body>
 
-    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse" style="animation-delay: 2s;"></div>
+    <div class="bg-anim"></div>
 
-    <div class="z-10 w-full max-w-md mx-auto text-center space-y-8">
-        
-        <div class="space-y-2">
-            <p class="text-pink-500 font-bold tracking-[0.3em] text-xs uppercase">Yapay Zeka Kabini</p>
-            <h1 class="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent">
-                PARADOKS KIOSK
-            </h1>
+    <div class="container">
+        <h1 class="title-arcade">LEVEL<br>COMPLETE</h1>
+        <div class="subtitle">Yeni profil fotoğrafın hazır!</div>
+
+        <div class="image-frame" id="image-frame">
+            <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
+            <img id="user-image" src="" alt="Paradoks Sonuç">
         </div>
 
-        <div id="loading-status" class="glass p-10 rounded-3xl animate-pulse flex flex-col items-center">
-            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-pink-500 mb-4"></i>
-            <p class="text-zinc-300 font-medium">Başyapıtınız aranıyor...</p>
-        </div>
+        <a id="download-btn" class="btn-download" href="#" download="Paradoks_Gelecegin.jpg">
+            <svg class="download-icon" viewBox="0 0 24 24">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+            GALERİYE KAYDET
+        </a>
 
-        <div id="photo-container" class="hidden transform transition-all duration-700 translate-y-4 opacity-0">
-            <div class="glass p-2 rounded-3xl neon-glow mb-6 relative group">
-                <img id="user-photo" class="rounded-2xl w-full h-auto object-cover" alt="AI Üretimi Fotoğrafınız">
-                <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20">
-                    <p class="text-[10px] font-bold text-white/80"><i class="fa-solid fa-wand-magic-sparkles text-pink-400 mr-1"></i> AI Generated</p>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="downloadImage()" class="flex items-center justify-center gap-2 py-4 px-4 bg-white text-black font-bold rounded-2xl hover:bg-zinc-200 hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-                    <i class="fa-solid fa-download text-lg"></i>
-                    <span>Kaydet</span>
-                </button>
-                
-                <button onclick="shareImage()" class="flex items-center justify-center gap-2 py-4 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-2xl hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(236,72,153,0.4)]">
-                    <i class="fa-regular fa-paper-plane text-lg"></i>
-                    <span>Paylaş</span>
-                </button>
-            </div>
-        </div>
+        <p class="hint">İndirme butonu çalışmazsa,<br>fotoğrafın üzerine basılı tutarak<br><strong>"Fotoğraflara Kaydet"</strong> diyebilirsin.</p>
     </div>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const photoUrl = params.get('url');
+        // 1. URL'den 'url' parametresini (Firebase linkini) al
+        const urlParams = new URLSearchParams(window.location.search);
+        const imageUrl = urlParams.get('url');
 
-        if (photoUrl) {
-            const img = document.getElementById('user-photo');
-            const container = document.getElementById('photo-container');
-            const loading = document.getElementById('loading-status');
+        const imgElement = document.getElementById('user-image');
+        const downloadBtn = document.getElementById('download-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
 
-            img.src = photoUrl;
-            
-            // Görsel tamamen yüklendiğinde animasyonla ekrana getir
-            img.onload = () => {
-                loading.classList.add('hidden');
-                container.classList.remove('hidden');
-                
-                // Küçük bir gecikme ile yukarı kayarak belirme animasyonunu tetikle
-                setTimeout(() => {
-                    container.classList.remove('translate-y-4', 'opacity-0');
-                }, 50);
+        if (imageUrl) {
+            // Resmi ekrana bas
+            imgElement.src = imageUrl;
+
+            // Resim yüklendiğinde loading yazısını kaldır ve resmi göster
+            imgElement.onload = function() {
+                loadingIndicator.style.display = 'none';
+                imgElement.style.opacity = '1';
             };
-        } else {
-            document.getElementById('loading-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"></i><p class="text-red-400">Görsel bulunamadı veya link hatalı.</p>';
-        }
 
-        // AKILLI PAYLAŞIM SİSTEMİ (WhatsApp, Insta, Airdrop vb.)
-        async function shareImage() {
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'Paradoks Kiosk',
-                        text: 'Paradoks Kiosk AI kabininde oluşturduğum fotoğrafıma bak! 🚀😎',
-                        url: photoUrl
-                    });
-                } catch (err) {
-                    console.log('Paylaşım penceresi kapatıldı.', err);
+            // İndirme butonunun hedefini ayarla
+            downloadBtn.href = imageUrl;
+
+            // Mobilde bazı tarayıcılar (örneğin Instagram içi tarayıcılar) direkt indirmeye izin vermeyebilir.
+            // Bu yüzden butona tıklandığında resmi yeni sekmede açmak gibi bir yedekleme (fallback) eklenebilir.
+            downloadBtn.addEventListener('click', function(e) {
+                // Eğer tarayıcı download attribute'unu desteklemiyorsa:
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                if(isSafari) {
+                    e.preventDefault();
+                    window.open(imageUrl, '_blank');
                 }
-            } else {
-                // Eğer telefon desteklemiyorsa linki kopyala
-                navigator.clipboard.writeText(photoUrl);
-                alert("Link kopyalandı! İstediğin yere yapıştırabilirsin.");
-            }
-        }
+            });
 
-        // AKILLI İNDİRME SİSTEMİ
-        async function downloadImage() {
-            try {
-                // Firebase linkini blob'a çevirip zorla indirtiyoruz (yeni sekmede açılmasın diye)
-                const response = await fetch(photoUrl);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'paradoks_ai_art.jpg';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-            } catch (e) {
-                // Eğer CORS engeli olursa mecburen yeni sekmede aç
-                window.open(photoUrl, '_blank');
-            }
+        } else {
+            // Eğer URL parametresi yoksa (birisi siteye direkt girdiyse)
+            loadingIndicator.innerText = "FOTOĞRAF BULUNAMADI";
+            loadingIndicator.style.color = "red";
+            downloadBtn.style.display = "none";
         }
     </script>
 </body>

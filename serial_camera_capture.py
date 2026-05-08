@@ -1,218 +1,199 @@
-import qrcode
+import os
+import io
+import time
+import uuid
+import base64
 import serial
 import cv2
-import time
-import os
+import requests
+import qrcode
+import numpy as np
+import threading  # 🔥 ARTIK GERÇEK THREAD KULLANIYORUZ
+from PIL import Image
+from flask import Flask, render_template
+from flask_socketio import SocketIO
+from dotenv import load_dotenv
+
 import google.generativeai as genai
 import fal_client
-from PIL import Image
-import io
-import requests
-import base64
-from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, storage
+
+# --- YAPILANDIRMA VE ANAHTARLAR ---
 load_dotenv()
 
-# Seri port ayarları (Arduino)
-SERIAL_PORT = "COM4"
+SERIAL_PORT = os.getenv("SERIAL_PORT", "COM4")
 BAUD_RATE = 9600
+CAMERA_URL = "http://192.168.1.112:8080/video"
+VERCEL_SITE_URL = "https://arcadekiosk.vercel.app"
 
-# Kamera ayarları
-OUTPUT_FILENAME = "temp_capture.jpg"
-
-# API Anahtarları
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 FAL_KEY = os.getenv("FAL_KEY")
 FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
 
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY ayarlanmamış.")
-if not FAL_KEY:
-    raise ValueError("FAL_KEY ayarlanmamış.")
-
 os.environ["FAL_KEY"] = FAL_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
-# --- GELİŞMİŞ STİL VE PARAMETRE TANIMLAMALARI ---
-# Artık her buton kendi özel ayar paketine (dictionary) sahip.
+if not firebase_admin._apps:
+    cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred, {'storageBucket': FIREBASE_BUCKET})
+
+app = Flask(__name__)
+# 🔥 EN KRİTİK NOKTA: async_mode='threading' diyerek Eventlet'i devre dışı bırakıyoruz.
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+os.makedirs("templates", exist_ok=True)
+os.makedirs("static", exist_ok=True)
+
+system_state = "IDLE" 
+
 STYLES = {
     "1": {
-        "description": (
-            "Cyberpunk style, neon lights, dystopian futuristic city, high-tech aesthetic. "
-            "ENVIRONMENT: A dark, rainy neon-lit alleyway or futuristic cyberpunk street. "
-            "LIGHTING: Dramatic neon pink, blue, and cyan rim lighting."
-        ),
-        "lora_path": "https://v3b.fal.media/files/b/0a992bb3/U1K45GdlqqdKJ1Rbv0xDu_ghibli_lora.safetensors", # Cyberpunk LoRA linki
-        "lora_scale": 0.8,
-        "strength": 0.75,
-        "guidance_scale": 3.5
+        "description": "Cyberpunk style, neon lights, dystopian futuristic city, high-tech aesthetic.",
+        "lora_path": "https://v3b.fal.media/files/b/0a992bb3/U1K45GdlqqdKJ1Rbv0xDu_ghibli_lora.safetensors",
+        "lora_scale": 0.8, "strength": 0.75, "guidance_scale": 3.5
     },
     "2": {
-        "description": (
-            "Classic Renaissance oil painting style, royal clothing, dramatic lighting, masterpiece art. "
-            "ENVIRONMENT: A grand medieval castle hall or a classic portrait studio background. "
-            "LIGHTING: Chiaroscuro lighting, dark background with a soft, dramatic warm light on the subject."
-        ),
-        "lora_path": "https://v3b.fal.media/files/b/0a992d06/yqKSDuH2y7zpBvJjHQAFp_ghibli_lora.safetensors", # Yağlı Boya LoRA linki ile değiştir
-        "lora_scale": 0.9,
-        "strength": 0.65,
-        "guidance_scale": 3.5
+        "description": "Classic Renaissance oil painting style, royal clothing, dramatic lighting.",
+        "lora_path": "https://v3b.fal.media/files/b/0a992d06/yqKSDuH2y7zpBvJjHQAFp_ghibli_lora.safetensors",
+        "lora_scale": 0.9, "strength": 0.65, "guidance_scale": 3.5
     },
     "3": {
-        "description": (
-            "Studio Ghibli nature aesthetic, 2D minimalist art, flat paint style illustration. "
-            "ENVIRONMENT: A breathtaking lush wilderness, rolling green hills, vast blue sky, mossy trees. "
-            "LIGHTING: Soft, warm golden hour sunlight filtering through the leaves (komorebi effect)."
-        ),
+        "description": "Studio Ghibli nature aesthetic, 2D minimalist art.",
         "lora_path": "https://v3b.fal.media/files/b/0a992e5e/Qq0aPre6xknYETusvflCV_ghibli_lora.safetensors",
-        "lora_scale": 0.75,
-        "strength": 0.72,
-        "guidance_scale": 9,
+        "lora_scale": 0.75, "strength": 0.72, "guidance_scale": 9.0
     }
 }
 
+# --- YARDIMCI FONKSİYONLAR ---
+def upload_to_firebase(image_path):
+    print("☁️ Görsel Firebase'e yükleniyor...")
+    bucket = storage.bucket()
+    blob = bucket.blob(f"kiosk_images/{uuid.uuid4().hex}.jpg")
+    blob.upload_from_filename(image_path)
+    blob.make_public()
+    return blob.public_url
+
 def process_image_with_ai(image_path, stil_ayarlari, buton_no):
     try:
-        # 1. Fotoğrafı Hazırla (GEMİNİ İÇİN OPTİMİZE EDİLMİŞ)
         img = Image.open(image_path)
-        
-        # Orijinal fotoğrafı bozmadan, sadece bellekteki (RAM) kopyasını küçültüyoruz
-        # thumbnail() metodu fotoğrafın en/boy oranını bozmadan maksimum 512x512 yapar
-        img.thumbnail((512, 512)) 
-        
+        img.thumbnail((512, 512))
         img_byte_arr = io.BytesIO()
-        
-        # quality=60 parametresi ile dosya boyutunu %80 oranında küçültüyoruz (Sadece Gemini için)
-        img.save(img_byte_arr, format="JPEG", quality=60) 
-        img_byte_arr = img_byte_arr.getvalue()
-        
-        # Terminalde boyut farkını görmek için (opsiyonel)
-        print(f"DEBUG (AI): Resim optimize edildi. Yeni boyut: {len(img_byte_arr) / 1024:.1f} KB")
+        img.save(img_byte_arr, format="JPEG", quality=60)
+        img_data = img_byte_arr.getvalue()
 
-        # 2. Gemini ile Analiz (Dinamik Stil Kullanımı)
         gemini_model = genai.GenerativeModel("gemini-2.5-flash")
-        print("DEBUG (AI): Gemini modeli başlatıldı.")
-        
-        # Prompt'a seçilen butona ait stili (description) yerleştiriyoruz
-        # Gemini artık bir "Yönetmen" ve "Karakter Tasarımcısı"
-        # Gemini: Polis Eskiz Ressamı + Aksiyon Yönetmeni
-        prompt = (
-            f"You are a master character designer for [STYLE: {stil_ayarlari['description']}]. "
-            "Because the image-to-image denoising strength is very high, your text description is the ONLY way the AI will know what the person looks like. "
-            "STRICT RULES FOR YOUR OUTPUT PROMPT: "
-            "1. START WITH TRIGGER WORDS: Begin exactly with the trigger words for the style. "
-            "2. EXTREME MICRO-DETAIL FACIAL PROFILE (CRITICAL): Describe the person's face in forensic detail. Include gender, approximate age, exact hair color and style (e.g., messy brown hair parted to the side), eye shape and color, eyebrow thickness, nose shape, jawline, skin tone, and any facial hair. "
-            "3. SPECIFIC ACCESSORIES: If they have glasses, describe the EXACT frame shape, thickness, and material (e.g., 'round thin metal wire-rimmed glasses'). "
-            "4. DYNAMIC POSE: Force a completely new, epic action pose typical for [STYLE] (e.g., heroic stance, running, casting magic). Destroy the original pose. "
-            "5. EPIC WORLD: Describe a vast, detailed new background environment matching the style. Destroy the original room/background. "
-            "6. OUTPUT ONLY THE FINAL PROMPT TEXT IN ENGLISH. NO INTRODUCTIONS, NO MARKDOWN."
-        )
-        
-        print("Gemini ile fotoğraf analiz ediliyor...")
-        response = gemini_model.generate_content([
-            prompt,
-            {"mime_type": "image/jpeg", "data": img_byte_arr}
-        ])
-        
-        gemini_text_prompt = response.text.strip()
-        if ":" in gemini_text_prompt:
-            gemini_text_prompt = gemini_text_prompt.split(":", 1)[-1].strip()
-        print(f"Üretilen Prompt: {gemini_text_prompt}")
+        prompt = f"You are a master character designer for [STYLE: {stil_ayarlari['description']}]. Describe the person's face in forensic detail. Force a completely new, epic action pose and environment matching the style. OUTPUT ONLY THE FINAL PROMPT TEXT IN ENGLISH."
+        response = gemini_model.generate_content([prompt, {"mime_type": "image/jpeg", "data": img_data}])
+        gemini_prompt = response.text.strip().split(":", 1)[-1].strip()
+        print(f"🧠 Gemini Prompt Üretti: {gemini_prompt[:50]}...")
 
-        # 3. Fal.ai Yükleme ve Üretim (PREMIUM KALİTE MODU)
-        print("DEBUG (AI): Orjinal görsel Fal.ai'ye yükleniyor...")
-        image_url = fal_client.upload_file(image_path)
-        print(f"DEBUG (AI): Orjinal görsel Fal.ai'ye yüklendi. URL: {image_url}")
-
-        print(f"Fal.ai (Flux Dev LoRA - Premium) ile görsel üretiliyor... (Buton: {buton_no})")
-        
-        # SÖZLÜKTEN GELEN DİNAMİK DEĞERLERİ API'YE GÖNDERİYORUZ
+        print("🎨 Fal.ai görseli üretiyor...")
+        uploaded_original = fal_client.upload_file(image_path)
         handler = fal_client.run(
             "fal-ai/flux-lora", 
             arguments={
-                "prompt": gemini_text_prompt,
-                "image_url": image_url,
-                "model_name": "flux-dev",           
-                "num_inference_steps": 28,          
-                "strength": stil_ayarlari["strength"],         # DÜZELTİLDİ: Sabit 0.80 yerine dinamik sözlük değişkeni
+                "prompt": gemini_prompt,
+                "image_url": uploaded_original,
+                "model_name": "flux-dev",
+                "num_inference_steps": 28,
+                "strength": stil_ayarlari["strength"],
                 "image_size": "portrait_16_9",
-                "loras": [
-                    {
-                        "path": stil_ayarlari["lora_path"], 
-                        "scale": stil_ayarlari["lora_scale"]
-                    }
-                ],
-                "guidance_scale": stil_ayarlari["guidance_scale"], # DÜZELTİLDİ: Sabit 9.0 yerine dinamik sözlük değişkeni
-                "sync_mode": True                   
+                "loras": [{"path": stil_ayarlari["lora_path"], "scale": stil_ayarlari["lora_scale"]}],
+                "guidance_scale": stil_ayarlari["guidance_scale"],
+                "sync_mode": True
             }
         )
-        
         fal_image_url = handler["images"][0]["url"]
-        print(f"Görsel üretildi: {fal_image_url}")
 
-        # ... üst kısımlar aynı ...
-        
-        fal_image_url = handler["images"][0]["url"]
-        
-        # 4. Final Görseli Çözümle veya İndir
-        print("DEBUG (AI): Üretilen görsel işleniyor...")
-        
         if fal_image_url.startswith("data:image"):
-            # Eğer veri Base64 (metin) olarak geldiyse doğrudan piksellere çevir
-            print("Görsel doğrudan metin (Base64) olarak geldi, dönüştürülüyor...")
-            # "data:image/jpeg;base64," kısmını atıp sadece kodu alıyoruz
-            base64_kodu = fal_image_url.split(",")[1] 
-            img_data = base64.b64decode(base64_kodu)
+            base64_data = fal_image_url.split(",")[1]
+            final_img_bytes = base64.b64decode(base64_data)
         else:
-            # Eğer standart bir https:// linki geldiyse internetten indir
-            print(f"Görsel link olarak geldi, indiriliyor... URL kısaltması: {fal_image_url[:30]}...")
-            img_data = requests.get(fal_image_url).content
-        
-        final_dosya_adi = f"paradoks_final_stil_{buton_no}.jpg"
-        
-        # Resmi bellekte (PIL formatında) aç
-        ana_resim = Image.open(io.BytesIO(img_data))
-        
-        # --- QR KOD OLUŞTURMA BÖLÜMÜ ---
-        # QR Kodun içine ne koyacağız?
-        # Eğer Base64 geldiyse QR koda devasa metni koyamayız, o yüzden sitenin adresini koyalım
-        # Şimdilik kendi sitenin adresini (veya geçici bir metin) yaz
-        qr_hedef_link = "https://senin-kiosk-siten.com/yakinda" 
-        if not fal_image_url.startswith("data:image"):
-            qr_hedef_link = fal_image_url # Eğer link geldiyse linki koy
-            
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=2,
-        )
-        qr.add_data(qr_hedef_link)
+            final_img_bytes = requests.get(fal_image_url).content
+
+        clean_image_path = "static/clean_output.jpg"
+        with open(clean_image_path, "wb") as f:
+            f.write(final_img_bytes)
+
+        cloud_url = upload_to_firebase(clean_image_path)
+        full_web_link = f"{VERCEL_SITE_URL}/?url={cloud_url}"
+
+        ana_resim = Image.open(clean_image_path)
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=4)
+        qr.add_data(full_web_link)
         qr.make(fit=True)
         
         qr_resim = qr.make_image(fill_color="black", back_color="white")
-        hedef_qr_boyut = int(ana_resim.width * 0.15)
-        qr_resim = qr_resim.resize((hedef_qr_boyut, hedef_qr_boyut))
+        hedef_qr_boyut = int(ana_resim.width * 0.25)
+        qr_resim = qr_resim.resize((hedef_qr_boyut, hedef_qr_boyut), Image.NEAREST)
         
-        pos_x = ana_resim.width - hedef_qr_boyut - 30
-        pos_y = ana_resim.height - hedef_qr_boyut - 30
-        
+        pos_x = ana_resim.width - hedef_qr_boyut - 40
+        pos_y = ana_resim.height - hedef_qr_boyut - 40
         ana_resim.paste(qr_resim, (pos_x, pos_y))
         
-        # QR kodlu final resmi bilgisayara kaydet
+        final_dosya_adi = f"static/paradoks_final.jpg"
         ana_resim.save(final_dosya_adi)
-        print(f"✅ İşlem başarıyla tamamlandı! '{final_dosya_adi}' hazır.")
+        
+        return final_dosya_adi 
 
     except Exception as e:
-        print(f"AI İşlem Hatası: {e}")
+        print(f"❌ AI İşlem Hatası: {e}")
+        return None
 
-def main():
-    print("Seri port dinleniyor (Sonsuz Döngü Modu Aktif)...")
+# --- ARKA PLAN GÖREVİ (Kamera ve AI) ---
+def process_kiosk_flow(gelen_kod):
+    global system_state
+    try:
+        print("📸 Kameradan görüntü alınıyor...")
+        snapshot_url = CAMERA_URL.replace("/video", "/shot.jpg")
+        img_resp = requests.get(snapshot_url, timeout=5)
+        
+        if img_resp.status_code == 200:
+            print("✅ Fotoğraf çekildi, yapay zekaya gönderiliyor...")
+            img_array = np.array(bytearray(img_resp.content), dtype=np.uint8)
+            frame = cv2.imdecode(img_array, -1)
+            
+            h, w, _ = frame.shape
+            hedef_w = int(h * 9 / 16)
+            baslangic_x = (w - hedef_w) // 2
+            frame_portrait = frame[:, baslangic_x:baslangic_x + hedef_w]
+            
+            temp_path = "static/temp_capture.jpg"
+            cv2.imwrite(temp_path, frame_portrait)
+            
+            final_resim_yolu = process_image_with_ai(temp_path, STYLES[gelen_kod], gelen_kod)
+            
+            if final_resim_yolu:
+                system_state = "SHOWING"
+                cache_buster = uuid.uuid4().hex[:6] 
+                socketio.emit('state_update', {
+                    'state': 'SHOWING',
+                    'image_url': f"/{final_resim_yolu}?v={cache_buster}"
+                })
+                print("✅ İşlem bitti, ekranda gösteriliyor.")
+            else:
+                print("⚠️ AI işlemi başarısız oldu, sistem sıfırlanıyor.")
+                system_state = "IDLE"
+                socketio.emit('state_update', {'state': 'IDLE'})
+        else:
+            print("⚠️ Kameradan geçerli bir yanıt alınamadı!")
+            system_state = "IDLE"
+            socketio.emit('state_update', {'state': 'IDLE'})
+            
+    except Exception as cam_error:
+        print(f"⚠️ Kiosk Akış Hatası: {cam_error}")
+        system_state = "IDLE"
+        socketio.emit('state_update', {'state': 'IDLE'})
+
+# --- ANA DİNLEME DÖNGÜSÜ ---
+def handle_arduino():
+    global system_state
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
-        time.sleep(2) 
-        print(f"COM Port {SERIAL_PORT} {BAUD_RATE} baud hızında açıldı.")
+        print("🔌 Arduino Dinleniyor...")
     except serial.SerialException as e:
-        print(f"Hata: Seri port açılamadı - {e}")
+        print(f"❌ Hata: Seri port açılamadı - {e}")
         return
 
     while True:
@@ -220,58 +201,47 @@ def main():
             if ser.in_waiting > 0:
                 gelen_kod = ser.readline().decode("utf-8", errors="ignore").strip()
                 
-                if gelen_kod in STYLES:
-                    print("\n" + "="*50)
-                    print(f"🎯 BUTON {gelen_kod} TETİKLENDİ! İşlem Başlatılıyor...")
-                    print("="*50)
-                    
-                    # Seçilen butona ait TÜM AYARLARI değişkene atıyoruz
-                    secilen_ayarlar = STYLES[gelen_kod]
-                    
-                    cap = cv2.VideoCapture("http://192.168.1.103:8080/video")
-                    
-                    if not cap.isOpened():
-                        print("Hata: Kamera açılamadı. Tekrar deneniyor...")
-                        ser.reset_input_buffer()
-                        continue
+                if system_state == "SHOWING":
+                    print("🔄 Yeni kişi için ana ekrana dönülüyor...")
+                    system_state = "IDLE"
+                    socketio.emit('state_update', {'state': 'IDLE'})
+                    ser.reset_input_buffer()
+                    time.sleep(1) # 🔥 Gerçek sleep
+                    continue
 
-                    try:
-                        time.sleep(0.5) 
-                        ret, frame = cap.read()
-                        
-                        if ret:
-                            h, w, _ = frame.shape
-                            hedef_w = int(h * 9 / 16) # 3/4 yerine 9/16 yapıyoruz
-                            baslangic_x = (w - hedef_w) // 2
-                            frame_portrait = frame[:, baslangic_x:baslangic_x + hedef_w]
-                            
-                            cv2.imwrite(OUTPUT_FILENAME, frame_portrait)
-                            print(f"📸 Fotoğraf dikey (portrait) olarak kaydedildi.")
-                            
-                            # Yeni yapıda, stil stringi yerine direkt sözlük paketini (secilen_ayarlar) gönderiyoruz
-                            process_image_with_ai(OUTPUT_FILENAME, secilen_ayarlar, gelen_kod)
-                        else:
-                            print("Hata: Kameradan görüntü okunamadı.")
-                    finally:
-                        cap.release()
-                        
-                        time.sleep(1) 
-                        ser.reset_input_buffer() 
-                        print("\n✅ Döngü tamamlandı. Yeni kişi bekleniyor...")
-                        print("-" * 50)
-            
+                if system_state == "IDLE" and gelen_kod in STYLES:
+                    print(f"🎯 BUTON {gelen_kod} TETİKLENDİ!")
+                    system_state = "PROCESSING"
+                    
+                    # 1. FRONTEND'E FLAŞI TETİKLEMESİ İÇİN ANINDA SİNYAL GÖNDER
+                    socketio.emit('state_update', {
+                        'state': 'PROCESSING', 
+                        'style_name': STYLES[gelen_kod]['description'].split(",", 1)[0]
+                    })
+                    
+                    # 2. SISTEMİ GERÇEKTEN 0.1 SANİYE UYUT Kİ TARAYICI FLAŞI PATLATSIN
+                    time.sleep(0.1) 
+                    
+                    # 3. KAMERA VE AI İŞLEMİNİ TAMAMEN BAĞIMSIZ BİR ÇEKİRDEĞE (THREAD) AT
+                    threading.Thread(target=process_kiosk_flow, args=(gelen_kod,), daemon=True).start()
+                    
             time.sleep(0.05)
-
-        except KeyboardInterrupt:
-            print("\n🛑 Program durduruldu.")
-            break
         except Exception as e:
-            print(f"⚠️ Bir hata oluştu ama döngü devam ediyor: {e}")
-            time.sleep(2)
-            continue
+            print(f"⚠️ Döngü Hatası: {e}")
+            time.sleep(1)
 
-    if ser.is_open:
-        ser.close()
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    # Arduino dinleme işlemini gerçek bir Thread olarak başlatıyoruz
+    threading.Thread(target=handle_arduino, daemon=True).start()
+    
+    print("\n" + "="*50)
+    print("🚀 PARADOKS KIOSK SUNUCUSU AKTİF! (Gerçek Threading Mimarisi)")
+    print("👉 Tarayıcından şu adrese git: http://127.0.0.1:5000")
+    print("="*50 + "\n")
+    
+    # Eventlet uyarısı almamak ve stabil çalışmak için
+    socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
