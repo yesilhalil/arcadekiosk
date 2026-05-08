@@ -186,7 +186,7 @@
     </div>
 
     <script>
-        // 1. URL'den 'url' parametresini (Firebase linkini) al
+        // 1. URL'den 'url' parametresini al
         const urlParams = new URLSearchParams(window.location.search);
         const imageUrl = urlParams.get('url');
 
@@ -198,28 +198,51 @@
             // Resmi ekrana bas
             imgElement.src = imageUrl;
 
-            // Resim yüklendiğinde loading yazısını kaldır ve resmi göster
+            // Resim yüklendiğinde loading yazısını kaldır
             imgElement.onload = function() {
                 loadingIndicator.style.display = 'none';
                 imgElement.style.opacity = '1';
             };
 
-            // İndirme butonunun hedefini ayarla
-            downloadBtn.href = imageUrl;
+            // 🎯 BLOB HACK: Doğrudan İndirme İşlemi
+            downloadBtn.addEventListener('click', async function(e) {
+                e.preventDefault(); // Klasik link açma davranışını durdur
+                
+                // UX: Müşteri butona bastığını anlasın diye yazıyı değiştiriyoruz
+                const originalText = downloadBtn.innerHTML;
+                downloadBtn.innerHTML = "İNDİRİLİYOR...";
 
-            // Mobilde bazı tarayıcılar (örneğin Instagram içi tarayıcılar) direkt indirmeye izin vermeyebilir.
-            // Bu yüzden butona tıklandığında resmi yeni sekmede açmak gibi bir yedekleme (fallback) eklenebilir.
-            downloadBtn.addEventListener('click', function(e) {
-                // Eğer tarayıcı download attribute'unu desteklemiyorsa:
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                if(isSafari) {
-                    e.preventDefault();
+                try {
+                    // Resmi arka planda (Blob veri olarak) indir
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    
+                    // Veriyi yerel bir tarayıcı linkine (Object URL) çevir
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    
+                    // Görünmez bir link oluşturup ona tıklatıyoruz (Zorla İndirme)
+                    const tempLink = document.createElement('a');
+                    tempLink.style.display = 'none';
+                    tempLink.href = blobUrl;
+                    tempLink.download = "Paradoks_Kiosk_Hatirasi.jpg"; // İnecek dosyanın adı
+                    document.body.appendChild(tempLink);
+                    tempLink.click();
+                    
+                    // Hafızayı temizle
+                    window.URL.revokeObjectURL(blobUrl);
+                    document.body.removeChild(tempLink);
+                } catch (error) {
+                    // HATA YÖNETİMİ: Eğer Firebase (CORS) bu arka plan indirmesini engellerse
+                    // B Planı: Resmi yeni sekmede aç (Hint yazısı burada hayat kurtarır)
+                    console.warn("Zorla indirme engellendi, yeni sekmede açılıyor:", error);
                     window.open(imageUrl, '_blank');
+                } finally {
+                    // 1 saniye sonra buton yazısını eski haline döndür
+                    setTimeout(() => { downloadBtn.innerHTML = originalText; }, 1000);
                 }
             });
 
         } else {
-            // Eğer URL parametresi yoksa (birisi siteye direkt girdiyse)
             loadingIndicator.innerText = "FOTOĞRAF BULUNAMADI";
             loadingIndicator.style.color = "red";
             downloadBtn.style.display = "none";
