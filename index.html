@@ -81,11 +81,20 @@
         }
 
         /* --- 🔥 3D KART KONTEYNERİ & EFEKTLERİ --- */
+/* 1. Kısım: Perspective değerini 1000'den 800'e çekip derinliği artırdık */
         .card-3d-wrapper {
             width: 100%;
-            perspective: 1000px; 
+            perspective: 800px; 
             margin-bottom: 20px;
             touch-action: none; 
+        }
+
+        /* 2. Kısım: Karakteri %5 büyüttük ki sağa sola kayarken kenardan boşluk vermesin */
+        #cutout-image {
+            transform: translateZ(25px) scale(1.05); 
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 0.5s ease;
         }
 
         .image-frame {
@@ -418,7 +427,7 @@
         const frame = document.getElementById('image-frame');
         const glare = document.getElementById('holo-glare');
 
-        function handleMove(x, y) {
+            function handleMove(x, y) {
             const rect = wrapper.getBoundingClientRect();
             
             const centerX = rect.left + rect.width / 2;
@@ -427,21 +436,35 @@
             const mouseX = x - centerX;
             const mouseY = y - centerY;
             
+            // Ana Çerçeve Eğimi
             const rotateX = (-mouseY / (rect.height / 2)) * 25;
             const rotateY = (mouseX / (rect.width / 2)) * 25;
-            
             frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
             
+            // 🔥 YENİ: Karakterin Aktif 3D Süzülmesi (Active Parallax)
+            // Karakteri kartın eğilme yönünün tersine hareket ettirerek canlılık katıyoruz
+            if (cutoutElement) {
+                const charMoveX = (mouseX / (rect.width / 2)) * -18; // Sağa sola 18px süzülür
+                const charMoveY = (mouseY / (rect.height / 2)) * -18; // Yukarı aşağı 18px süzülür
+                cutoutElement.style.transform = `translateZ(40px) translateX(${charMoveX}px) translateY(${charMoveY}px) scale(1.08)`;
+            }
+            
+            // Hologram Parlaması
             const glareX = ((x - rect.left) / rect.width) * 100;
             const glareY = ((y - rect.top) / rect.height) * 100;
             
-            glare.style.opacity = '0.65';
+            glare.style.opacity = '0.75';
             glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.8) 0%, rgba(255,0,255,0.3) 30%, rgba(0,255,255,0.1) 60%, transparent 80%)`;
         }
 
         function resetCard() {
+            // Parmağı çekince her şey eski haline yumuşakça döner
             frame.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
             glare.style.opacity = '0';
+            
+            if (cutoutElement) {
+                cutoutElement.style.transform = `translateZ(25px) translateX(0px) translateY(0px) scale(1.05)`;
+            }
         }
 
         wrapper.addEventListener('touchmove', (e) => {
