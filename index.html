@@ -135,7 +135,6 @@
         #overlay-image {
             transform: translateZ(45px); 
             z-index: 3;
-            /* Maskeyi kaldırdık, çünkü arka planı şeffaf olan saf PNG'yi kullanıyoruz! */
         }
 
         /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
@@ -164,7 +163,6 @@
 
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* ... Buton Stilleri Aynen Korundu ... */
         .btn-group { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .btn-buy-physical { background: linear-gradient(90deg, #ffcc00, #ff6600); color: #000; font-family: Arial, sans-serif; font-weight: 900; font-size: 1.05rem; padding: 14px 20px; border: 2px solid white; border-radius: 30px; box-shadow: 0 0 15px #ffcc00; cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; animation: pulse-gold 2s infinite; }
         @keyframes pulse-gold { 0% { box-shadow: 0 0 10px #ffcc00; } 50% { box-shadow: 0 0 25px #ff6600, inset 0 0 10px #ffcc00; } 100% { box-shadow: 0 0 10px #ffcc00; } }
@@ -279,7 +277,6 @@
             if (cutoutElement) cutoutElement.onload = checkLoad;
             if (overlayElement) overlayElement.onload = checkLoad;
 
-            // Buton Olayları - Burası her zaman orijinal "tam birleşik" (c) resmi indirir
             buyPhysicalBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 alert("Shopier güvenli ödeme sayfasına yönlendiriliyorsunuz.\n\nSiparişinizin doğru basılabilmesi için lütfen Sipariş Notu kısmına resimdeki #PRDX ile başlayan kart kodunuzu yazmayı unutmayın!");
