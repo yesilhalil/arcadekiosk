@@ -55,7 +55,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 5vh;
+            padding-top: 4vh;
             padding-bottom: 5vh;
             z-index: 10;
         }
@@ -65,19 +65,27 @@
             font-size: 1.5rem;
             color: var(--arcade-yellow);
             text-shadow: 3px 3px 0px var(--arcade-magenta);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-align: center;
             line-height: 1.4;
         }
 
         .subtitle {
             color: var(--arcade-cyan);
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 800;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             text-shadow: 0 0 10px var(--arcade-cyan);
             letter-spacing: 1px;
             text-transform: uppercase;
+        }
+
+        /* --- 🔥 3D KART KONTEYNERİ & EFEKTLERİ --- */
+        .card-3d-wrapper {
+            width: 100%;
+            perspective: 1000px; /* 3D Derinlik Algısı */
+            margin-bottom: 20px;
+            touch-action: none; /* Mobilde kaydırma yaparken sayfanın aşağı kaymasını engeller */
         }
 
         .image-frame {
@@ -88,8 +96,12 @@
             background-color: #000;
             padding: 5px;
             box-sizing: border-box;
-            margin-bottom: 25px;
             position: relative;
+            
+            /* 3D Dönüş Animasyon Hazırlıkları */
+            transform-style: preserve-3d;
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+            will-change: transform;
         }
 
         #user-image {
@@ -99,6 +111,26 @@
             display: block;
             opacity: 0;
             transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
+        .holo-glare {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 10px;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.4) 0%,
+                rgba(255, 0, 255, 0.2) 35%,
+                rgba(0, 255, 255, 0.2) 70%,
+                rgba(255, 255, 255, 0.4) 100%
+            );
+            opacity: 0; /* Başlangıçta görünmez, dokununca parlar */
+            mix-blend-mode: color-dodge;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 5;
         }
 
         .loading-text {
@@ -121,7 +153,6 @@
             gap: 12px;
         }
 
-        /* YENİ: FİZİKSEL SİPARİŞ BUTONU CSS */
         .btn-buy-physical {
             background: linear-gradient(90deg, #ffcc00, #ff6600);
             color: #000;
@@ -154,9 +185,7 @@
             100% { box-shadow: 0 0 10px #ffcc00; }
         }
 
-        .btn-buy-physical:active {
-            transform: scale(0.95);
-        }
+        .btn-buy-physical:active { transform: scale(0.95); }
 
         .btn-download {
             background: linear-gradient(90deg, var(--arcade-magenta), #cc00cc);
@@ -208,18 +237,12 @@
             box-sizing: border-box;
         }
 
-        .btn-download:active, .btn-download-photo:active {
-            transform: scale(0.95);
-        }
+        .btn-download:active, .btn-download-photo:active { transform: scale(0.95); }
 
-        .download-icon {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-        }
+        .download-icon { width: 20px; height: 20px; fill: currentColor; }
 
         .hint {
-            margin-top: 20px;
+            margin-top: 15px;
             font-size: 0.8rem;
             color: #aaa;
             text-align: center;
@@ -234,21 +257,22 @@
 
     <div class="container">
         <h1 class="title-arcade">LEVEL<br>COMPLETE</h1>
-        <div class="subtitle">KARTIN HAZIR!</div>
+        <div class="subtitle">✨ KARTINI İNCELEMEK İÇİN SÜRÜKLE ✨</div>
 
-        <div class="image-frame" id="image-frame">
-            <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
-            <img id="user-image" src="" alt="Paradoks Sonuç">
+        <!-- 3D WRAPPER KATMANI -->
+        <div class="card-3d-wrapper" id="card-wrapper">
+            <div class="image-frame" id="image-frame">
+                <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
+                <img id="user-image" src="" alt="Paradoks Sonuç">
+                <div class="holo-glare" id="holo-glare"></div>
+            </div>
         </div>
 
         <div class="btn-group">
-            
-            <!-- YENİ: FİZİKSEL SİPARİŞ BUTONU -->
             <a id="buy-physical-btn" class="btn-buy-physical" href="#" target="_blank">
                 📦 KARTI FİZİKSEL SATIN AL
             </a>
 
-            <!-- 1. RPG KART İNDİRME BUTONU -->
             <a id="download-btn" class="btn-download" href="#" target="_blank">
                 <svg class="download-icon" viewBox="0 0 24 24">
                     <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -256,7 +280,6 @@
                 RPG KARTINI İNDİR
             </a>
 
-            <!-- 2. SADECE HAM FOTOĞRAF İNDİRME BUTONU -->
             <a id="download-photo-btn" class="btn-download-photo" href="#" target="_blank">
                 <svg class="download-icon" viewBox="0 0 24 24">
                     <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -269,44 +292,34 @@
     </div>
 
     <script>
-        // URL'den parametreleri güvenli bir şekilde al
         const urlParams = new URLSearchParams(window.location.search);
-        const imageUrl = urlParams.get('url');      // RPG Kartı Linki
-        const rawPhotoUrl = urlParams.get('photo'); // Ham Fotoğraf Linki
+        const imageUrl = urlParams.get('url');      
+        const rawPhotoUrl = urlParams.get('photo'); 
 
         const imgElement = document.getElementById('user-image');
         const downloadBtn = document.getElementById('download-btn');
         const downloadPhotoBtn = document.getElementById('download-photo-btn');
-        const buyPhysicalBtn = document.getElementById('buy-physical-btn'); // YENİ EKLENDİ
+        const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        // YENİ: KENDİ SHOPIER DÜKKAN LİNKİNİ BURAYA YAZACAKSIN
         const SHOPIER_URL = "https://www.shopier.com/SiparisLinkinBurayaGelecek";
 
-        // Gelişmiş İndirme / Açma Fonksiyonu
         async function triggerDirectDownload(fileUrl, fileName, btnElement, originalText) {
             if (!fileUrl) return;
-
             btnElement.innerHTML = "İNDİRİLİYOR...";
-
             try {
-                // Önce Blob dene (CORS izin veriyorsa doğrudan indirecektir)
                 const response = await fetch(fileUrl, { mode: 'cors' });
                 const blob = await response.blob();
                 const blobUrl = window.URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = blobUrl;
                 a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
-                
                 window.URL.revokeObjectURL(blobUrl);
                 document.body.removeChild(a);
             } catch (err) {
-                console.warn("Blob indirme engellendi, doğrudan yeni sekmede açılıyor:", err);
-                // CORS engeli varsa doğrudan tarayıcıda resmi aç
                 window.open(fileUrl, '_blank');
             } finally {
                 setTimeout(() => { btnElement.innerHTML = originalText; }, 1200);
@@ -314,36 +327,26 @@
         }
 
         if (imageUrl) {
-            // Ekranda önizleme olarak RPG kartını göster
             imgElement.src = imageUrl;
-
             imgElement.onload = function() {
                 loadingIndicator.style.display = 'none';
                 imgElement.style.opacity = '1';
             };
 
-            // YENİ: SİPARİŞ BUTONU TIKLAMA YAKALAYICISI
             buyPhysicalBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Müşteriye Shopier sayfasında ne yapması gerektiğini anlatan uyarı
                 alert("Shopier güvenli ödeme sayfasına yönlendiriliyorsunuz.\n\nSiparişinizin doğru basılabilmesi için lütfen Sipariş Notu kısmına resimdeki #PRDX ile başlayan kart kodunuzu yazmayı unutmayın!");
-                
-                // Shopier'e ileride backend ile entegre olabilmek için Firebase görsel linkini de paslıyoruz.
                 const finalShopierUrl = `${SHOPIER_URL}?image_url=${encodeURIComponent(imageUrl)}`;
                 window.open(finalShopierUrl, '_blank');
             });
 
-            // 1. RPG Kartı İndirme Butonu Tıklama
             downloadBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 triggerDirectDownload(imageUrl, "Paradoks_RPG_Karti.jpg", downloadBtn, "RPG KARTINI İNDİR");
             });
 
-            // 2. Ham Fotoğraf İndirme Butonu Tıklama
             downloadPhotoBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                // photo adresi varsa onu, yoksa mecburen imageUrl'i indirir
                 const targetPhoto = rawPhotoUrl ? rawPhotoUrl : imageUrl;
                 triggerDirectDownload(targetPhoto, "Paradoks_AI_Fotograf.jpg", downloadPhotoBtn, "🖼️ SADECE FOTOĞRAFI İNDİR");
             });
@@ -353,8 +356,59 @@
             loadingIndicator.style.color = "red";
             downloadBtn.style.display = "none";
             downloadPhotoBtn.style.display = "none";
-            buyPhysicalBtn.style.display = "none"; // YENİ: Hata durumunda sipariş butonunu da gizle
+            buyPhysicalBtn.style.display = "none";
         }
+
+        /* --- 🔥 3D DÖNÜŞ VE İNCELEME JAVASCRIPT KODLARI --- */
+        const wrapper = document.getElementById('card-wrapper');
+        const frame = document.getElementById('image-frame');
+        const glare = document.getElementById('holo-glare');
+
+        function handleMove(x, y) {
+            const rect = wrapper.getBoundingClientRect();
+            
+            // X ve Y orta noktalarını hesapla
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const mouseX = x - centerX;
+            const mouseY = y - centerY;
+            
+            // Maksimum 25 derece eğim
+            const rotateX = (-mouseY / (rect.height / 2)) * 25;
+            const rotateY = (mouseX / (rect.width / 2)) * 25;
+            
+            // 3D Dönüşü uygula
+            frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+            
+            // Parlaklık / Hologram Efektini Parmağın Konumuna Göre Taşı
+            const glareX = ((x - rect.left) / rect.width) * 100;
+            const glareY = ((y - rect.top) / rect.height) * 100;
+            
+            glare.style.opacity = '0.65';
+            glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.8) 0%, rgba(255,0,255,0.3) 30%, rgba(0,255,255,0.1) 60%, transparent 80%)`;
+        }
+
+        function resetCard() {
+            frame.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            glare.style.opacity = '0';
+        }
+
+        // Dokunmatik Ekran (Mobil) Etkileşimleri
+        wrapper.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+
+        wrapper.addEventListener('touchend', resetCard);
+
+        // Fare (Masaüstü) Etkileşimleri
+        wrapper.addEventListener('mousemove', (e) => {
+            handleMove(e.clientX, e.clientY);
+        });
+
+        wrapper.addEventListener('mouseleave', resetCard);
     </script>
 </body>
 </html>
