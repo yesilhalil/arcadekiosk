@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
-    <link href="[https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap](https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap)" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -83,7 +83,7 @@
         /* --- 🔥 3D KART KONTEYNERİ & EFEKTLERİ --- */
         .card-3d-wrapper {
             width: 100%;
-            perspective: 1000px; /* 3D Derinlik Algısı */
+            perspective: 1000px; 
             margin-bottom: 20px;
             touch-action: none; 
         }
@@ -97,13 +97,12 @@
             padding: 5px;
             box-sizing: border-box;
             position: relative;
-            
-            /* 3D Dönüş Animasyon Hazırlıkları */
             transform-style: preserve-3d;
             transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
             will-change: transform;
         }
 
+        /* 🥪 1. KATMAN: EN ARKA (Orijinal Kart) */
         #user-image {
             width: 100%;
             height: auto;
@@ -112,19 +111,35 @@
             opacity: 0;
             transition: opacity 0.5s ease;
             pointer-events: none;
+            transform: translateZ(0px);
         }
 
-        /* 🔥 YENİ: 3D FIRLAYAN KARAKTER KATMANI */
-        #cutout-image {
+        /* 🥪 ORTAK STİL: 2. ve 3. Katman Hizalaması */
+        #cutout-image, #card-overlay {
             position: absolute;
             top: 5px; left: 5px;
             width: calc(100% - 10px); height: calc(100% - 10px);
             border-radius: 10px;
             pointer-events: none; 
-            transform: translateZ(45px) scale(1.05); /* Karttan 45px dışarı fırlar! */
-            z-index: 10;
+        }
+
+        /* 🥪 2. KATMAN: ORTA (Tüm Vücut Şeffaf Karakter) */
+        #cutout-image {
+            transform: translateZ(25px); /* Ortada havada asılı durur */
+            z-index: 2;
             opacity: 0;
             transition: opacity 0.5s ease;
+        }
+
+        /* 🥪 3. KATMAN: EN ÖN (Arayüz ve Stat Çubukları) */
+        #card-overlay {
+            transform: translateZ(45px); /* En önde durur */
+            z-index: 3;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            /* HARİKA MANTIK: Resmin sadece üst (0-11%) ve alt (65-100%) bölgesini gösterip ortayı karakterin fırlaması için şeffaf bırakır! */
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 11%, rgba(0,0,0,0) 13%, rgba(0,0,0,0) 63%, rgba(0,0,0,1) 65%, rgba(0,0,0,1) 100%);
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 11%, rgba(0,0,0,0) 13%, rgba(0,0,0,0) 63%, rgba(0,0,0,1) 65%, rgba(0,0,0,1) 100%);
         }
 
         /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
@@ -144,6 +159,7 @@
             pointer-events: none;
             transition: opacity 0.3s ease;
             z-index: 5;
+            transform: translateZ(50px);
         }
 
         .loading-text {
@@ -277,13 +293,16 @@
             <div class="image-frame" id="image-frame">
                 <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
                 
-                <!-- 1. Katman: Orijinal Kart -->
+                <!-- 🥪 1. Katman: En Arka (Ana Kart) -->
                 <img id="user-image" src="" alt="Paradoks Sonuç">
                 
-                <!-- 🔥 2. Katman: Şeffaf Karakter (Fırlayan Kısım) -->
+                <!-- 🥪 2. Katman: Orta (Tüm Vücut Şeffaf Karakter) -->
                 <img id="cutout-image" src="" alt="3D Karakter">
+
+                <!-- 🥪 3. Katman: En Ön (Sadece Yazılar ve Stat Çubukları) -->
+                <img id="card-overlay" src="" alt="Arayüz Katmanı">
                 
-                <!-- 3. Katman: Hologram Parlaması -->
+                <!-- 4. Katman: Hologram Parlaması -->
                 <div class="holo-glare" id="holo-glare"></div>
             </div>
         </div>
@@ -315,16 +334,18 @@
         const urlParams = new URLSearchParams(window.location.search);
         const imageUrl = urlParams.get('url');      
         const rawPhotoUrl = urlParams.get('photo'); 
-        const cutoutUrl = urlParams.get('cutout'); // 🔥 YENİ: Şeffaf karakter linki
+        const cutoutUrl = urlParams.get('cutout'); 
 
         const imgElement = document.getElementById('user-image');
-        const cutoutElement = document.getElementById('cutout-image'); // 🔥 YENİ
+        const cutoutElement = document.getElementById('cutout-image'); 
+        const overlayElement = document.getElementById('card-overlay'); // 🔥 YENİ
+
         const downloadBtn = document.getElementById('download-btn');
         const downloadPhotoBtn = document.getElementById('download-photo-btn');
         const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        const SHOPIER_URL = "[https://www.shopier.com/SiparisLinkinBurayaGelecek](https://www.shopier.com/SiparisLinkinBurayaGelecek)";
+        const SHOPIER_URL = "https://www.shopier.com/SiparisLinkinBurayaGelecek";
 
         async function triggerDirectDownload(fileUrl, fileName, btnElement, originalText) {
             if (!fileUrl) return;
@@ -350,12 +371,15 @@
 
         if (imageUrl) {
             imgElement.src = imageUrl;
+            overlayElement.src = imageUrl; // 🔥 Aynı resmi öndeki maske katmanına da yüklüyoruz!
+
             imgElement.onload = function() {
                 loadingIndicator.style.display = 'none';
                 imgElement.style.opacity = '1';
+                overlayElement.style.opacity = '1';
             };
 
-            // 🔥 Şeffaf Karakteri Yükle (Eğer Varsa)
+            // Şeffaf Karakteri Yükle
             if (cutoutUrl) {
                 cutoutElement.src = cutoutUrl;
                 cutoutElement.onload = function() {
@@ -420,7 +444,6 @@
             glare.style.opacity = '0';
         }
 
-        // Dokunmatik Ekran (Mobil) Etkileşimleri
         wrapper.addEventListener('touchmove', (e) => {
             if (e.touches.length > 0) {
                 handleMove(e.touches[0].clientX, e.touches[0].clientY);
@@ -429,7 +452,6 @@
 
         wrapper.addEventListener('touchend', resetCard);
 
-        // Fare (Masaüstü) Etkileşimleri
         wrapper.addEventListener('mousemove', (e) => {
             handleMove(e.clientX, e.clientY);
         });
