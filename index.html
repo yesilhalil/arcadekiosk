@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
-    <link href="[https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap](https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap)" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -15,23 +15,15 @@
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            min-height: 100vh;
+            margin: 0; padding: 0;
+            width: 100vw; min-height: 100vh;
             background-color: var(--dark-bg);
             background-image: 
                 linear-gradient(rgba(255, 0, 255, 0.15) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 0, 255, 0.15) 1px, transparent 1px);
-            background-size: 40px 40px;
-            background-position: center bottom;
-            color: white;
-            font-family: 'Orbitron', sans-serif;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            background-size: 40px 40px; background-position: center bottom;
+            color: white; font-family: 'Orbitron', sans-serif;
+            overflow-x: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
         }
 
         @keyframes moveGrid {
@@ -40,127 +32,51 @@
         }
 
         .bg-anim {
-            position: fixed; 
-            top: -40px; left: 0; width: 100%; height: calc(100% + 40px);
-            background-image: inherit;
-            background-size: inherit;
-            animation: moveGrid 3s linear infinite;
-            z-index: -1;
-            opacity: 0.6;
+            position: fixed; top: -40px; left: 0; width: 100%; height: calc(100% + 40px);
+            background-image: inherit; background-size: inherit;
+            animation: moveGrid 3s linear infinite; z-index: -1; opacity: 0.6;
         }
 
         .container {
-            width: 90%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 4vh;
-            padding-bottom: 5vh;
-            z-index: 10;
+            width: 90%; max-width: 500px;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 4vh; padding-bottom: 5vh; z-index: 10;
         }
 
         .title-arcade {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 1.5rem;
-            color: var(--arcade-yellow);
-            text-shadow: 3px 3px 0px var(--arcade-magenta);
-            margin-bottom: 8px;
-            text-align: center;
-            line-height: 1.4;
+            font-family: 'Press Start 2P', cursive; font-size: 1.5rem;
+            color: var(--arcade-yellow); text-shadow: 3px 3px 0px var(--arcade-magenta);
+            margin-bottom: 8px; text-align: center; line-height: 1.4;
         }
 
         .subtitle {
-            color: var(--arcade-cyan);
-            font-size: 0.95rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px var(--arcade-cyan);
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            color: var(--arcade-cyan); font-size: 0.95rem; font-weight: 800;
+            margin-bottom: 20px; text-shadow: 0 0 10px var(--arcade-cyan);
+            letter-spacing: 1px; text-transform: uppercase;
         }
 
-        /* --- 🔥 3D KART KONTEYNERİ & EFEKTLERİ --- */
-        .card-3d-wrapper {
-            width: 100%;
-            perspective: 900px; 
-            margin-bottom: 20px;
-            touch-action: none; 
-        }
+        .card-3d-wrapper { width: 100%; perspective: 900px; margin-bottom: 20px; touch-action: none; }
 
         .image-frame {
-            width: 100%;
-            border: 4px solid var(--arcade-cyan);
-            border-radius: 15px;
+            width: 100%; border: 4px solid var(--arcade-cyan); border-radius: 15px;
             box-shadow: 0 0 20px var(--arcade-cyan), 0 0 40px var(--arcade-magenta) inset;
-            background-color: #000;
-            padding: 5px;
-            box-sizing: border-box;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+            background-color: #000; padding: 5px; box-sizing: border-box; position: relative;
+            transform-style: preserve-3d; transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
             will-change: transform;
         }
 
-        /* 🥪 1. KATMAN: EN ARKA (Yapay Zekanın Çizdiği Ham Arka Plan Resmi) */
-        #bg-image {
-            width: 100%;
-            height: auto;
-            border-radius: 10px;
-            display: block;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-            transform: translateZ(0px);
-        }
+        #bg-image { width: 100%; height: auto; border-radius: 10px; display: block; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; transform: translateZ(0px); }
+        #cutout-image, #overlay-image { position: absolute; top: 5px; left: 5px; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
+        #cutout-image { transform: translateZ(25px) scale(1.05); z-index: 2; }
+        #overlay-image { transform: translateZ(45px); z-index: 3; }
 
-        /* Ortak Stil (2. ve 3. Katmanlar İçin) */
-        #cutout-image, #overlay-image {
-            position: absolute;
-            top: 5px; left: 5px;
-            width: calc(100% - 10px); height: calc(100% - 10px);
-            border-radius: 10px;
-            pointer-events: none; 
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-
-        /* 🥪 2. KATMAN: ORTA (3D Süzülen Karakter - Maske Yok!) */
-        #cutout-image {
-            transform: translateZ(25px) scale(1.05); 
-            z-index: 2;
-        }
-
-        /* 🥪 3. KATMAN: EN ÖN (Şeffaf Çerçeve, Yazılar ve Statlar) */
-        #overlay-image {
-            transform: translateZ(45px); 
-            z-index: 3;
-        }
-
-        /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
         .holo-glare {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 10px;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 10px;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 0, 255, 0.2) 35%, rgba(0, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.4) 100%);
-            opacity: 0; 
-            mix-blend-mode: color-dodge;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            z-index: 5;
-            transform: translateZ(50px);
+            opacity: 0; mix-blend-mode: color-dodge; pointer-events: none; transition: opacity 0.3s ease; z-index: 5; transform: translateZ(50px);
         }
 
-        .loading-text {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.8rem;
-            color: var(--arcade-magenta);
-            animation: blink 1s infinite;
-        }
-
+        .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: var(--arcade-magenta); animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
         .btn-group { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -185,17 +101,9 @@
         <div class="card-3d-wrapper" id="card-wrapper">
             <div class="image-frame" id="image-frame">
                 <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
-                
-                <!-- 🥪 1. Katman: Sadece Ham AI Resmi (Arka Plan) -->
                 <img id="bg-image" src="" alt="Arka Plan">
-                
-                <!-- 🥪 2. Katman: 3D Esneyen Karakter -->
                 <img id="cutout-image" src="" alt="3D Karakter">
-                
-                <!-- 🥪 3. Katman: Arayüz ve Statlar (Ön Cam) -->
                 <img id="overlay-image" src="" alt="Arayüz Katmanı">
-
-                <!-- Hologram Parlaması -->
                 <div class="holo-glare" id="holo-glare"></div>
             </div>
         </div>
@@ -216,8 +124,6 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        
-        // 🔥 Link Piksellerini Düşürmek İçin Kısaltılmış Parametreleri Çekiyoruz
         const imageUrl = urlParams.get('c') || urlParams.get('url');      
         const bgUrl = urlParams.get('b') || urlParams.get('photo'); 
         const cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
@@ -232,7 +138,7 @@
         const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        const SHOPIER_URL = "[https://www.shopier.com/SiparisLinkinBurayaGelecek](https://www.shopier.com/SiparisLinkinBurayaGelecek)";
+        const SHOPIER_URL = "https://www.shopier.com/SiparisLinkinBurayaGelecek";
 
         async function triggerDirectDownload(fileUrl, fileName, btnElement, originalText) {
             if (!fileUrl) return;
@@ -254,18 +160,16 @@
         }
 
         if (imageUrl) {
-            // Katmanları Kaynaklara Bağla
             bgElement.src = bgUrl || imageUrl;
             if (cutoutUrl) cutoutElement.src = cutoutUrl;
             if (overlayUrl) overlayElement.src = overlayUrl;
 
-            // Tüm Resimler Yüklendiğinde Ekranda Göster
             let loadedCount = 0;
             const totalImages = (bgUrl ? 1 : 0) + (cutoutUrl ? 1 : 0) + (overlayUrl ? 1 : 0);
 
             function checkLoad() {
                 loadedCount++;
-                if (loadedCount >= totalImages) {
+                if (loadedCount >= totalImages || totalImages === 0) {
                     loadingIndicator.style.display = 'none';
                     bgElement.style.opacity = '1';
                     if (cutoutElement.src) cutoutElement.style.opacity = '1';
@@ -276,6 +180,13 @@
             bgElement.onload = checkLoad;
             if (cutoutElement) cutoutElement.onload = checkLoad;
             if (overlayElement) overlayElement.onload = checkLoad;
+
+            setTimeout(() => {
+                loadingIndicator.style.display = 'none';
+                bgElement.style.opacity = '1';
+                if (cutoutElement.src) cutoutElement.style.opacity = '1';
+                if (overlayElement.src) overlayElement.style.opacity = '1';
+            }, 1000);
 
             buyPhysicalBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -302,7 +213,6 @@
             buyPhysicalBtn.style.display = "none";
         }
 
-        /* --- 🔥 3D DÖNÜŞ VE İNCELEME JAVASCRIPT KODLARI --- */
         const wrapper = document.getElementById('card-wrapper');
         const frame = document.getElementById('image-frame');
         const glare = document.getElementById('holo-glare');
@@ -319,7 +229,6 @@
             
             frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
             
-            // 🔥 Karakter Özgürce Süzülüyor (Barların Arkasında)
             if (cutoutElement) {
                 const charMoveX = (mouseX / (rect.width / 2)) * -12; 
                 const charMoveY = (mouseY / (rect.height / 2)) * -12; 
