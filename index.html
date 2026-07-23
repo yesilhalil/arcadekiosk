@@ -123,7 +123,7 @@
             transform: translateZ(0px);
         }
 
-        /* 🥪 ORTAK STİL: 2. ve 3. Katman Hizalaması */
+/* 🥪 ORTAK STİL: 2. ve 3. Katman Hizalaması */
         #cutout-image, #card-overlay {
             position: absolute;
             top: 5px; left: 5px;
@@ -134,21 +134,22 @@
 
         /* 🥪 2. KATMAN: ORTA (Tüm Vücut Şeffaf Karakter) */
         #cutout-image {
-            transform: translateZ(25px); /* Ortada havada asılı durur */
+            transform: translateZ(20px) scale(1.05); /* Derinlik ve köşelerden taşmaması için %5 büyük */
             z-index: 2;
             opacity: 0;
             transition: opacity 0.5s ease;
         }
 
-        /* 🥪 3. KATMAN: EN ÖN (Arayüz ve Stat Çubukları) */
+        /* 🥪 3. KATMAN: EN ÖN (SADECE Alt Statlar) */
         #card-overlay {
-            transform: translateZ(45px); /* En önde durur */
+            transform: translateZ(35px); /* Statlar karakterin önünde durur */
             z-index: 3;
             opacity: 0;
             transition: opacity 0.5s ease;
-            /* HARİKA MANTIK: Resmin sadece üst (0-11%) ve alt (65-100%) bölgesini gösterip ortayı karakterin fırlaması için şeffaf bırakır! */
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 11%, rgba(0,0,0,0) 13%, rgba(0,0,0,0) 63%, rgba(0,0,0,1) 65%, rgba(0,0,0,1) 100%);
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 11%, rgba(0,0,0,0) 13%, rgba(0,0,0,0) 63%, rgba(0,0,0,1) 65%, rgba(0,0,0,1) 100%);
+            
+            /* 🔥 HARİKA MANTIK: Maskenin üstünü tamamen açtık! Sadece %65'ten sonrasını (statları) gösterir. Karakter kafası özgürce dışarı fırlar! */
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 64%, rgba(0,0,0,1) 67%, rgba(0,0,0,1) 100%);
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 64%, rgba(0,0,0,1) 67%, rgba(0,0,0,1) 100%);
         }
 
         /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
@@ -436,34 +437,31 @@
             const mouseX = x - centerX;
             const mouseY = y - centerY;
             
-            // Ana Çerçeve Eğimi
             const rotateX = (-mouseY / (rect.height / 2)) * 25;
             const rotateY = (mouseX / (rect.width / 2)) * 25;
+            
             frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
             
-            // 🔥 YENİ: Karakterin Aktif 3D Süzülmesi (Active Parallax)
-            // Karakteri kartın eğilme yönünün tersine hareket ettirerek canlılık katıyoruz
+            // 🔥 YUMUŞATILMIŞ SÜZÜLME (Daha Tok 3D Hissi)
             if (cutoutElement) {
-                const charMoveX = (mouseX / (rect.width / 2)) * -18; // Sağa sola 18px süzülür
-                const charMoveY = (mouseY / (rect.height / 2)) * -18; // Yukarı aşağı 18px süzülür
-                cutoutElement.style.transform = `translateZ(40px) translateX(${charMoveX}px) translateY(${charMoveY}px) scale(1.08)`;
+                const charMoveX = (mouseX / (rect.width / 2)) * -8; // Kayma mesafesini -8'e çektik
+                const charMoveY = (mouseY / (rect.height / 2)) * -8; 
+                cutoutElement.style.transform = `translateZ(20px) translateX(${charMoveX}px) translateY(${charMoveY}px) scale(1.05)`;
             }
             
-            // Hologram Parlaması
             const glareX = ((x - rect.left) / rect.width) * 100;
             const glareY = ((y - rect.top) / rect.height) * 100;
             
-            glare.style.opacity = '0.75';
+            glare.style.opacity = '0.65';
             glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.8) 0%, rgba(255,0,255,0.3) 30%, rgba(0,255,255,0.1) 60%, transparent 80%)`;
         }
 
         function resetCard() {
-            // Parmağı çekince her şey eski haline yumuşakça döner
             frame.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
             glare.style.opacity = '0';
             
             if (cutoutElement) {
-                cutoutElement.style.transform = `translateZ(25px) translateX(0px) translateY(0px) scale(1.05)`;
+                cutoutElement.style.transform = `translateZ(20px) translateX(0px) translateY(0px) scale(1.05)`;
             }
         }
 
