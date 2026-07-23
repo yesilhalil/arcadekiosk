@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="[https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap](https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap)" rel="stylesheet">
     
     <style>
         :root {
@@ -85,7 +85,7 @@
             width: 100%;
             perspective: 1000px; /* 3D Derinlik Algısı */
             margin-bottom: 20px;
-            touch-action: none; /* Mobilde kaydırma yaparken sayfanın aşağı kaymasını engeller */
+            touch-action: none; 
         }
 
         .image-frame {
@@ -114,6 +114,19 @@
             pointer-events: none;
         }
 
+        /* 🔥 YENİ: 3D FIRLAYAN KARAKTER KATMANI */
+        #cutout-image {
+            position: absolute;
+            top: 5px; left: 5px;
+            width: calc(100% - 10px); height: calc(100% - 10px);
+            border-radius: 10px;
+            pointer-events: none; 
+            transform: translateZ(45px) scale(1.05); /* Karttan 45px dışarı fırlar! */
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
         /* 🔥 DİNAMİK HOLOGRAM / PARILTI KATMANI */
         .holo-glare {
             position: absolute;
@@ -126,7 +139,7 @@
                 rgba(0, 255, 255, 0.2) 70%,
                 rgba(255, 255, 255, 0.4) 100%
             );
-            opacity: 0; /* Başlangıçta görünmez, dokununca parlar */
+            opacity: 0; 
             mix-blend-mode: color-dodge;
             pointer-events: none;
             transition: opacity 0.3s ease;
@@ -263,7 +276,14 @@
         <div class="card-3d-wrapper" id="card-wrapper">
             <div class="image-frame" id="image-frame">
                 <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
+                
+                <!-- 1. Katman: Orijinal Kart -->
                 <img id="user-image" src="" alt="Paradoks Sonuç">
+                
+                <!-- 🔥 2. Katman: Şeffaf Karakter (Fırlayan Kısım) -->
+                <img id="cutout-image" src="" alt="3D Karakter">
+                
+                <!-- 3. Katman: Hologram Parlaması -->
                 <div class="holo-glare" id="holo-glare"></div>
             </div>
         </div>
@@ -295,14 +315,16 @@
         const urlParams = new URLSearchParams(window.location.search);
         const imageUrl = urlParams.get('url');      
         const rawPhotoUrl = urlParams.get('photo'); 
+        const cutoutUrl = urlParams.get('cutout'); // 🔥 YENİ: Şeffaf karakter linki
 
         const imgElement = document.getElementById('user-image');
+        const cutoutElement = document.getElementById('cutout-image'); // 🔥 YENİ
         const downloadBtn = document.getElementById('download-btn');
         const downloadPhotoBtn = document.getElementById('download-photo-btn');
         const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        const SHOPIER_URL = "https://www.shopier.com/SiparisLinkinBurayaGelecek";
+        const SHOPIER_URL = "[https://www.shopier.com/SiparisLinkinBurayaGelecek](https://www.shopier.com/SiparisLinkinBurayaGelecek)";
 
         async function triggerDirectDownload(fileUrl, fileName, btnElement, originalText) {
             if (!fileUrl) return;
@@ -332,6 +354,14 @@
                 loadingIndicator.style.display = 'none';
                 imgElement.style.opacity = '1';
             };
+
+            // 🔥 Şeffaf Karakteri Yükle (Eğer Varsa)
+            if (cutoutUrl) {
+                cutoutElement.src = cutoutUrl;
+                cutoutElement.onload = function() {
+                    cutoutElement.style.opacity = '1';
+                };
+            }
 
             buyPhysicalBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -367,21 +397,17 @@
         function handleMove(x, y) {
             const rect = wrapper.getBoundingClientRect();
             
-            // X ve Y orta noktalarını hesapla
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
             
             const mouseX = x - centerX;
             const mouseY = y - centerY;
             
-            // Maksimum 25 derece eğim
             const rotateX = (-mouseY / (rect.height / 2)) * 25;
             const rotateY = (mouseX / (rect.width / 2)) * 25;
             
-            // 3D Dönüşü uygula
             frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
             
-            // Parlaklık / Hologram Efektini Parmağın Konumuna Göre Taşı
             const glareX = ((x - rect.left) / rect.width) * 100;
             const glareY = ((y - rect.top) / rect.height) * 100;
             
