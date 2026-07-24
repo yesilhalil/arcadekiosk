@@ -49,10 +49,18 @@
             margin-bottom: 8px; text-align: center; line-height: 1.4;
         }
 
+        /* 🎯 ALT SATIRA KAYMAYI ENGELLEYEN VE MOBİLDE KÜÇÜLEN TEK SATIR STİL */
         .subtitle {
-            color: var(--arcade-cyan); font-size: 0.95rem; font-weight: 800;
-            margin-bottom: 20px; text-shadow: 0 0 10px var(--arcade-cyan);
-            letter-spacing: 1px; text-transform: uppercase;
+            color: var(--arcade-cyan); 
+            font-size: clamp(0.55rem, 3.2vw, 0.85rem); 
+            font-weight: 800;
+            margin-bottom: 20px; 
+            text-shadow: 0 0 10px var(--arcade-cyan);
+            letter-spacing: 1px; 
+            text-transform: uppercase;
+            white-space: nowrap; 
+            width: 100%;
+            text-align: center;
         }
 
         .card-3d-wrapper { width: 100%; perspective: 900px; margin-bottom: 20px; touch-action: none; }
@@ -95,7 +103,7 @@
     <div class="bg-anim"></div>
 
     <div class="container">
-        <h1 class="title-arcade">LEVEL<br>COMPLETE</h1>
+        <h1 class="title-arcade">MISSION<br>COMPLETE</h1>
         <div class="subtitle">✨ KARTINI İNCELEMEK İÇİN SÜRÜKLE ✨</div>
 
         <div class="card-3d-wrapper" id="card-wrapper">
@@ -124,10 +132,35 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const imageUrl = urlParams.get('c') || urlParams.get('url');      
-        const bgUrl = urlParams.get('b') || urlParams.get('photo'); 
-        const cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
-        const overlayUrl = urlParams.get('o'); 
+        
+        // 🔥 HEM SIKIŞTIRILMIŞ BASE64 PARSİNG HEM DE ESKİ PARAMETRE DSTEĞİ
+        const compressedData = urlParams.get('d');
+        let imageUrl, bgUrl, cutoutUrl, overlayUrl;
+
+        if (compressedData) {
+            try {
+                // URL Safe Base64 Çözücü
+                let base64 = compressedData.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) { base64 += '='; }
+                const jsonStr = decodeURIComponent(escape(atob(base64)));
+                const payload = JSON.parse(jsonStr);
+
+                imageUrl = payload.c;
+                bgUrl = payload.b;
+                cutoutUrl = payload.t;
+                overlayUrl = payload.o;
+            } catch (e) {
+                console.error("Base64 Veri Çözme Hatası:", e);
+            }
+        }
+
+        // Eğer Base64 yoksa veya çözülemediyse eski açık parametreleri dene
+        if (!imageUrl) {
+            imageUrl = urlParams.get('c') || urlParams.get('url');      
+            bgUrl = urlParams.get('b') || urlParams.get('photo'); 
+            cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
+            overlayUrl = urlParams.get('o'); 
+        }
 
         const bgElement = document.getElementById('bg-image');
         const cutoutElement = document.getElementById('cutout-image'); 
