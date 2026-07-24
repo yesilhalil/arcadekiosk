@@ -132,7 +132,6 @@
             box-shadow: 0 0 10px #ff0055; display: flex; align-items: center; justify-content: center;
         }
         
-        /* 💡 KASA İÇİNDE GİRİŞ UYARISI VE HIZLI GİRİŞ BUTONU */
         .vault-warning-box {
             background: rgba(255, 234, 0, 0.1);
             border: 1px dashed var(--arcade-yellow);
@@ -220,7 +219,6 @@
             <h2>KİŞİSEL KASAN</h2>
             <p style="font-size: 0.75rem; color: #ccc;">Geçmişte çıkardığın tüm RPG kartların burada saklanır. İncelemek için birine tıkla!</p>
             
-            <!-- 💡 UYARI + İÇERİDEN GİRİŞ YAPMA BUTONU -->
             <div id="vault-auth-warning" class="vault-warning-box" style="display:none;">
                 <span>⚠️ Sekmeyi kapatırsan kartlar silinebilir! Kalıcı yapmak için:</span>
                 <button id="inline-google-login-btn" class="btn-inline-google">
@@ -283,7 +281,6 @@
             overlayUrl = urlParams.get('o'); 
         }
 
-        // DOM Elementleri
         const bgElement = document.getElementById('bg-image');
         const cutoutElement = document.getElementById('cutout-image'); 
         const overlayElement = document.getElementById('overlay-image'); 
@@ -333,7 +330,7 @@
         }
 
         // -------------------------------------------------------------
-        // 🏆 4. LOCAL STORAGE VE FIRESTORE İŞLEMLERİ
+        // 🏆 4. FIRESTORE & LOCAL STORAGE VERİ YÖNETİMİ (KESİN ÇÖZÜM)
         // -------------------------------------------------------------
         function saveCardLocally() {
             if (!imageUrl) return;
@@ -354,26 +351,42 @@
             openVaultBtn.style.display = 'flex';
         }
 
-        async function syncVaultToFirestore(user) {
-            if (!user) return;
-            const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
-            
-            await db.collection("users").doc(user.uid).set({
-                name: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            const userVaultRef = db.collection("users").doc(user.uid).collection("vault");
-            for (const card of localVault) {
-                await userVaultRef.doc(card.id).set({
-                    imageUrl: card.imageUrl,
-                    bgUrl: card.bgUrl,
-                    cutoutUrl: card.cutoutUrl,
-                    overlayUrl: card.overlayUrl,
-                    createdAt: card.date
+        // Kartı Veritabanına Yaz
+        async function saveCardToFirestore(user) {
+            if (!user || !imageUrl) return;
+            try {
+                // Kullanıcı kaydı
+                await db.collection("users").doc(user.uid).set({
+                    name: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
+
+                // Kart kaydı
+                const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").substring(0, 20);
+                await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
+                    imageUrl: imageUrl,
+                    bgUrl: bgUrl || "",
+                    cutoutUrl: cutoutUrl || "",
+                    overlayUrl: overlayUrl || "",
+                    createdAt: new Date().toISOString()
+                }, { merge: true });
+
+                // Varsa yerel hafızadaki kartları da aktar
+                const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+                for (const card of localVault) {
+                    const localDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").substring(0, 20);
+                    await db.collection("users").doc(user.uid).collection("vault").doc(localDocId).set({
+                        imageUrl: card.imageUrl,
+                        bgUrl: card.bgUrl || "",
+                        cutoutUrl: card.cutoutUrl || "",
+                        overlayUrl: card.overlayUrl || "",
+                        createdAt: card.date || new Date().toISOString()
+                    }, { merge: true });
+                }
+            } catch (e) {
+                console.error("Firestore Kayıt Hatası:", e);
             }
         }
 
@@ -382,7 +395,7 @@
             vaultBtn.style.background = "linear-gradient(90deg, #333, #111)";
             vaultBtn.style.color = "#00ffcc";
             vaultBtn.style.boxShadow = "none";
-            vaultBtn.style.pointerEvents = "auto"; // 🔥 TIKLANABİLİR YAPILDI!
+            vaultBtn.style.pointerEvents = "auto";
         }
 
         async function checkIfCurrentCardInVault() {
@@ -401,25 +414,24 @@
             }
         }
 
+        // OTURUM AÇILDIĞINDA UI VE BİLGİLERİ GÜNCELLE
         async function handleUserAuthenticated(user) {
             if (!user) return;
             saveCardLocally();
-            await syncVaultToFirestore(user);
+            await saveCardToFirestore(user);
             openVaultBtn.style.display = 'flex';
+            vaultAuthWarning.style.display = 'none'; // Sarı uyarıyı kaldır!
             markButtonAsAdded();
             authModal.classList.remove('active');
-            vaultAuthWarning.style.display = 'none';
         }
 
-        // 🔥 KOLEKSİYONUMA EKLE / KASANDA MEVCUT BUTONUNA TIKLANINCA
         vaultBtn.addEventListener('click', () => {
             saveCardLocally();
             const currentUser = auth.currentUser;
             if (currentUser) {
-                // Eğer zaten giriş yapmışsa direkt Kasa modalını aç!
+                saveCardToFirestore(currentUser);
                 openVaultBtn.click();
             } else {
-                // Giriş yapmamışsa Modal aç
                 authModal.classList.add('active');
             }
         });
@@ -430,7 +442,6 @@
             openVaultBtn.style.display = 'flex';
         });
 
-        // MERKEZİ GOOGLE GİRİŞ FONKSİYONU
         async function triggerGoogleLogin() {
             try {
                 if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -439,7 +450,7 @@
                     const result = await auth.signInWithPopup(googleProvider);
                     await handleUserAuthenticated(result.user);
                     if(vaultModal.classList.contains('active')) {
-                        openVaultBtn.click(); // Kasa açıksa verileri yenile
+                        openVaultBtn.click();
                     }
                 }
             } catch (error) { console.error("Giriş Hatası:", error); alert("Giriş yapılırken bir sorun oluştu."); }
@@ -454,10 +465,13 @@
             }
         }).catch((error) => console.error("Redirect Hatası:", error));
 
+        // 🔥 MERKEZİ AUTH DİNLENMESİ (SAYFA / GİZLİ SEKME AÇILINCA)
         auth.onAuthStateChanged(async (user) => {
             if (user) {
+                vaultAuthWarning.style.display = 'none'; // Giriş yapıldıysa sarı uyarıyı kesin kapat!
                 await handleUserAuthenticated(user);
             } else {
+                vaultAuthWarning.style.display = 'flex'; // Giriş yoksa sarı uyarıyı aç
                 let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
                 if(vault.length > 0) openVaultBtn.style.display = 'flex';
                 checkIfCurrentCardInVault();
@@ -465,7 +479,7 @@
         });
 
         // -------------------------------------------------------------
-        // 🎒 5. ENVANTER MODALINI AÇMA VE KARTLARI ÇEKME
+        // 🎒 5. ENVANTER MODALINI AÇMA VE VERİTABANINDAN KARTLARI ÇEKME
         // -------------------------------------------------------------
         openVaultBtn.addEventListener('click', async () => {
             vaultModal.classList.add('active');
@@ -474,9 +488,11 @@
             const user = auth.currentUser;
             
             if (user) {
-                vaultAuthWarning.style.display = 'none';
+                vaultAuthWarning.style.display = 'none'; // Giriş yapılmışsa kesin gizle
                 try {
+                    // Doğrudan veritabanından çek (Gizli sekme bağımsız)
                     const snapshot = await db.collection("users").doc(user.uid).collection("vault").orderBy("createdAt", "desc").get();
+                    
                     if (snapshot.empty) {
                         vaultGrid.innerHTML = "<p class='empty-vault'>Koleksiyonun henüz boş. Makineye gidip yeni bir kart bas!</p>";
                         return;
@@ -491,7 +507,7 @@
                     renderLocalVault();
                 }
             } else {
-                vaultAuthWarning.style.display = 'flex';
+                vaultAuthWarning.style.display = 'flex'; // Giriş yapılmadıysa göster
                 renderLocalVault();
             }
         });
@@ -503,7 +519,7 @@
                 return;
             }
             vaultGrid.innerHTML = "";
-            vault.reverse().forEach(card => renderVaultItem(card));
+            vault.slice().reverse().forEach(card => renderVaultItem(card));
         }
 
         function renderVaultItem(card) {
