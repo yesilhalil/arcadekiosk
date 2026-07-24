@@ -6,6 +6,11 @@
     <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
     
+    <!-- 🔥 FIREBASE SDK (COMPAT MODULES) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <style>
         :root {
             --arcade-cyan: #00ffff;
@@ -88,7 +93,6 @@
 
         .btn-group { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
         
-        /* 🏆 YENİ KOLEKSİYON BUTONU STİLİ */
         .btn-vault { background: linear-gradient(90deg, #00ffcc, #009933); color: #000; font-family: Arial, sans-serif; font-weight: 900; font-size: 1.05rem; padding: 14px 20px; border: 2px solid white; border-radius: 30px; box-shadow: 0 0 15px #00ffcc; cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; animation: pulse-green 2s infinite; }
         @keyframes pulse-green { 0% { box-shadow: 0 0 10px #00ffcc; } 50% { box-shadow: 0 0 25px #009933, inset 0 0 10px #00ffcc; } 100% { box-shadow: 0 0 10px #00ffcc; } }
         .btn-vault:active { transform: scale(0.95); }
@@ -134,7 +138,6 @@
         </div>
 
         <div class="btn-group">
-            <!-- 🏆 YENİ KOLEKSİYON BUTONU -->
             <button id="vault-btn" class="btn-vault">🏆 KOLEKSİYONUMA EKLE</button>
             
             <a id="buy-physical-btn" class="btn-buy-physical" href="#" target="_blank">📦 KARTI FİZİKSEL SATIN AL</a>
@@ -164,8 +167,30 @@
     </div>
 
     <script>
+        // -------------------------------------------------------------
+        // 🔥 1. FIREBASE CONFIGURATON (Burayı Kendi Panelindeki Bilgilerle Doldur)
+        // -------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEKNu16K9zEZey-5QeltIRTSjbc30U6e8",
+            authDomain: "arcadekiosk.firebaseapp.com",
+            projectId: "arcadekiosk",
+            storageBucket: "arcadekiosk.firebasestorage.app",
+            messagingSenderId: "348756245755",
+            appId: "1:348756245755:web:f4b8c0be51e26d3528c45e"
+        };
+
+        // Firebase Servislerini Başlat
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        // -------------------------------------------------------------
+        // 🛠️ 2. URL PARAMETRELERİ & BASE64 PARSER
+        // -------------------------------------------------------------
         const urlParams = new URLSearchParams(window.location.search);
-        
         const compressedData = urlParams.get('d');
         let imageUrl, bgUrl, cutoutUrl, overlayUrl;
 
@@ -180,9 +205,7 @@
                 bgUrl = payload.b;
                 cutoutUrl = payload.t;
                 overlayUrl = payload.o;
-            } catch (e) {
-                console.error("Base64 Veri Çözme Hatası:", e);
-            }
+            } catch (e) { console.error("Base64 Veri Çözme Hatası:", e); }
         }
 
         if (!imageUrl) {
@@ -204,50 +227,103 @@
 
         const SHOPIER_URL = "https://www.shopier.com/paradokskiosk/49269215";
 
-        /* 🔐 MODAL VE YEREL KAYIT İŞLEMLERİ */
         const authModal = document.getElementById('auth-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
         const googleLoginBtn = document.getElementById('google-login-btn');
 
-        // Geçici olarak kartı LocalStorage'a kaydetme fonksiyonu
+        // -------------------------------------------------------------
+        // 🏆 3. LOCAL STORAGE VE FIRESTORE SENKRONİZASYON İŞLEMLERİ
+        // -------------------------------------------------------------
         function saveCardLocally() {
             if (!imageUrl) return;
             const cardData = {
                 id: Date.now().toString(),
                 imageUrl: imageUrl,
-                bgUrl: bgUrl,
-                cutoutUrl: cutoutUrl,
-                overlayUrl: overlayUrl,
+                bgUrl: bgUrl || "",
+                cutoutUrl: cutoutUrl || "",
+                overlayUrl: overlayUrl || "",
                 date: new Date().toISOString()
             };
             
             let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
-            // Aynı kart zaten eklendiyse tekrar ekleme
             if (!vault.some(card => card.imageUrl === imageUrl)) {
                 vault.push(cardData);
                 localStorage.setItem('paradoks_vault', JSON.stringify(vault));
             }
         }
 
+        async function syncVaultToFirestore(user) {
+            const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+            
+            // Kullanıcı profilini oluştur/güncelle
+            await db.collection("users").doc(user.uid).set({
+                name: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            // Yerelde biriken tüm kartları kullanıcının Firestore hesabına aktar
+            const userVaultRef = db.collection("users").doc(user.uid).collection("vault");
+            for (const card of localVault) {
+                await userVaultRef.doc(card.id).set({
+                    imageUrl: card.imageUrl,
+                    bgUrl: card.bgUrl,
+                    cutoutUrl: card.cutoutUrl,
+                    overlayUrl: card.overlayUrl,
+                    createdAt: card.date
+                }, { merge: true });
+            }
+        }
+
+        function markButtonAsAdded() {
+            vaultBtn.innerHTML = "✅ KOLEKSİYONUNA EKLENDİ";
+            vaultBtn.style.background = "linear-gradient(90deg, #333, #111)";
+            vaultBtn.style.color = "#00ffcc";
+            vaultBtn.style.boxShadow = "none";
+            vaultBtn.style.pointerEvents = "none";
+        }
+
         vaultBtn.addEventListener('click', () => {
             saveCardLocally();
-            // Firebase entegre edilene kadar modalı açıyoruz
-            authModal.classList.add('active');
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                syncVaultToFirestore(currentUser);
+                markButtonAsAdded();
+            } else {
+                authModal.classList.add('active');
+            }
         });
 
         closeModalBtn.addEventListener('click', () => {
             authModal.classList.remove('active');
-            vaultBtn.innerHTML = "✅ KOLEKSİYONA EKLENDİ";
-            vaultBtn.style.background = "linear-gradient(90deg, #555, #333)";
-            vaultBtn.style.boxShadow = "none";
-            vaultBtn.style.pointerEvents = "none";
+            markButtonAsAdded();
         });
 
-        googleLoginBtn.addEventListener('click', () => {
-            // Firebase Auth tetiklenecek yer burası!
-            alert("Firebase Google Giriş sistemi çok yakında aktif edilecek!");
+        googleLoginBtn.addEventListener('click', async () => {
+            try {
+                const result = await auth.signInWithPopup(googleProvider);
+                await syncVaultToFirestore(result.user);
+                authModal.classList.remove('active');
+                markButtonAsAdded();
+                alert(`Hoş geldin ${result.user.displayName}! Kartın hesabına başarıyla eklendi.`);
+            } catch (error) {
+                console.error("Giriş Hatası:", error);
+                alert("Giriş yapılırken bir sorun oluştu: " + error.message);
+            }
         });
 
+        // Sayfa açıldığında oturum açık mı kontrol et
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                saveCardLocally();
+                syncVaultToFirestore(user);
+            }
+        });
+
+        // -------------------------------------------------------------
+        // 📥 4. İNDİRME VE GÖRSEL YÜKLEME MANTIĞI
+        // -------------------------------------------------------------
         async function triggerDirectDownload(fileUrl, fileName, btnElement, originalText) {
             if (!fileUrl) return;
             btnElement.innerHTML = "İNDİRİLİYOR...";
@@ -322,6 +398,9 @@
             vaultBtn.style.display = "none";
         }
 
+        // -------------------------------------------------------------
+        // 🕹️ 5. 3D KART PARALLAX VE MOUSE/TOUCH EFEKTİ
+        // -------------------------------------------------------------
         const wrapper = document.getElementById('card-wrapper');
         const frame = document.getElementById('image-frame');
         const glare = document.getElementById('holo-glare');
