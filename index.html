@@ -352,7 +352,7 @@
         }
 
         // Kartı Veritabanına Yaz
-        async function saveCardToFirestore(user) {
+async function saveCardToFirestore(user) {
             if (!user || !imageUrl) return;
             try {
                 // Kullanıcı kaydı
@@ -363,8 +363,8 @@
                     lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                // Kart kaydı
-                const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").substring(0, 20);
+                // Kart kaydı (🔥 DEĞİŞİKLİK BURADA: slice(-30) kullanıldı)
+                const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
                 await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
                     imageUrl: imageUrl,
                     bgUrl: bgUrl || "",
@@ -373,10 +373,10 @@
                     createdAt: new Date().toISOString()
                 }, { merge: true });
 
-                // Varsa yerel hafızadaki kartları da aktar
+                // Varsa yerel hafızadaki kartları da aktar (🔥 DEĞİŞİKLİK BURADA: slice(-30) kullanıldı)
                 const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
                 for (const card of localVault) {
-                    const localDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").substring(0, 20);
+                    const localDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
                     await db.collection("users").doc(user.uid).collection("vault").doc(localDocId).set({
                         imageUrl: card.imageUrl,
                         bgUrl: card.bgUrl || "",
