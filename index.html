@@ -330,7 +330,7 @@
         }
 
         // -------------------------------------------------------------
-        // 🏆 4. FIRESTORE & LOCAL STORAGE VERİ YÖNETİMİ (KESİN ÇÖZÜM)
+        // 🏆 4. FIRESTORE & LOCAL STORAGE VERİ YÖNETİMİ
         // -------------------------------------------------------------
         function saveCardLocally() {
             if (!imageUrl) return;
@@ -351,8 +351,8 @@
             openVaultBtn.style.display = 'flex';
         }
 
-        // Kartı Veritabanına Yaz
-async function saveCardToFirestore(user) {
+        // Kartı Veritabanına Yaz (Benzersiz slice(-30) ID Yöntemi)
+        async function saveCardToFirestore(user) {
             if (!user || !imageUrl) return;
             try {
                 // Kullanıcı kaydı
@@ -363,7 +363,7 @@ async function saveCardToFirestore(user) {
                     lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                // Kart kaydı (🔥 DEĞİŞİKLİK BURADA: slice(-30) kullanıldı)
+                // Kart kaydı
                 const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
                 await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
                     imageUrl: imageUrl,
@@ -373,7 +373,7 @@ async function saveCardToFirestore(user) {
                     createdAt: new Date().toISOString()
                 }, { merge: true });
 
-                // Varsa yerel hafızadaki kartları da aktar (🔥 DEĞİŞİKLİK BURADA: slice(-30) kullanıldı)
+                // Varsa yerel hafızadaki kartları da aktar
                 const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
                 for (const card of localVault) {
                     const localDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
@@ -414,22 +414,22 @@ async function saveCardToFirestore(user) {
             }
         }
 
-        // OTURUM AÇILDIĞINDA UI VE BİLGİLERİ GÜNCELLE
+        // OTURUM AÇILDIĞINDA SADECE ARAYÜZÜ GÜNCELLE (OTOMATİK KAYIT YOK)
         async function handleUserAuthenticated(user) {
             if (!user) return;
-            saveCardLocally();
-            await saveCardToFirestore(user);
             openVaultBtn.style.display = 'flex';
-            vaultAuthWarning.style.display = 'none'; // Sarı uyarıyı kaldır!
-            markButtonAsAdded();
+            vaultAuthWarning.style.display = 'none';
+            await checkIfCurrentCardInVault();
             authModal.classList.remove('active');
         }
 
-        vaultBtn.addEventListener('click', () => {
+        // MANUEL KOLEKSİYONA EKLEME BUTONU
+        vaultBtn.addEventListener('click', async () => {
             saveCardLocally();
             const currentUser = auth.currentUser;
             if (currentUser) {
-                saveCardToFirestore(currentUser);
+                await saveCardToFirestore(currentUser);
+                markButtonAsAdded();
                 openVaultBtn.click();
             } else {
                 authModal.classList.add('active');
@@ -438,7 +438,7 @@ async function saveCardToFirestore(user) {
 
         closeModalBtn.addEventListener('click', () => { 
             authModal.classList.remove('active'); 
-            markButtonAsAdded();
+            checkIfCurrentCardInVault();
             openVaultBtn.style.display = 'flex';
         });
 
@@ -449,9 +449,11 @@ async function saveCardToFirestore(user) {
                 } else {
                     const result = await auth.signInWithPopup(googleProvider);
                     await handleUserAuthenticated(result.user);
-                    if(vaultModal.classList.contains('active')) {
-                        openVaultBtn.click();
-                    }
+                    // Giriş yapıldıktan sonra kartı otomatik kaydet
+                    saveCardLocally();
+                    await saveCardToFirestore(result.user);
+                    markButtonAsAdded();
+                    openVaultBtn.click();
                 }
             } catch (error) { console.error("Giriş Hatası:", error); alert("Giriş yapılırken bir sorun oluştu."); }
         }
@@ -462,16 +464,19 @@ async function saveCardToFirestore(user) {
         auth.getRedirectResult().then(async (result) => {
             if (result && result.user) {
                 await handleUserAuthenticated(result.user);
+                saveCardLocally();
+                await saveCardToFirestore(result.user);
+                markButtonAsAdded();
             }
         }).catch((error) => console.error("Redirect Hatası:", error));
 
-        // 🔥 MERKEZİ AUTH DİNLENMESİ (SAYFA / GİZLİ SEKME AÇILINCA)
+        // 🔥 MERKEZİ AUTH DİNLENMESİ (OTOMATİK KAYIT YAPMAZ)
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                vaultAuthWarning.style.display = 'none'; // Giriş yapıldıysa sarı uyarıyı kesin kapat!
+                vaultAuthWarning.style.display = 'none';
                 await handleUserAuthenticated(user);
             } else {
-                vaultAuthWarning.style.display = 'flex'; // Giriş yoksa sarı uyarıyı aç
+                vaultAuthWarning.style.display = 'flex';
                 let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
                 if(vault.length > 0) openVaultBtn.style.display = 'flex';
                 checkIfCurrentCardInVault();
@@ -488,9 +493,8 @@ async function saveCardToFirestore(user) {
             const user = auth.currentUser;
             
             if (user) {
-                vaultAuthWarning.style.display = 'none'; // Giriş yapılmışsa kesin gizle
+                vaultAuthWarning.style.display = 'none';
                 try {
-                    // Doğrudan veritabanından çek (Gizli sekme bağımsız)
                     const snapshot = await db.collection("users").doc(user.uid).collection("vault").orderBy("createdAt", "desc").get();
                     
                     if (snapshot.empty) {
@@ -507,7 +511,7 @@ async function saveCardToFirestore(user) {
                     renderLocalVault();
                 }
             } else {
-                vaultAuthWarning.style.display = 'flex'; // Giriş yapılmadıysa göster
+                vaultAuthWarning.style.display = 'flex';
                 renderLocalVault();
             }
         });
