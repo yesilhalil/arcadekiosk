@@ -235,7 +235,7 @@
 
     <script>
         // -------------------------------------------------------------
-        // 🔥 1. FIREBASE CONFIGURATON
+        // 🔥 1. FIREBASE CONFIGURATION
         // -------------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyAEKNu16K9zEZey-5QeltIRTSjbc30U6e8",
@@ -254,31 +254,31 @@
         const googleProvider = new firebase.auth.GoogleAuthProvider();
 
         // -------------------------------------------------------------
-        // 🛠️ 2. URL PARAMETRELERİ & BASE64 PARSER
+        // 🛠️ 2. URL PARAMETRELERİ (GÜVENLİ VE GARANTİLİ PARSER)
         // -------------------------------------------------------------
         const urlParams = new URLSearchParams(window.location.search);
-        const compressedData = urlParams.get('d');
-        let imageUrl, bgUrl, cutoutUrl, overlayUrl;
+        let imageUrl = "", bgUrl = "", cutoutUrl = "", overlayUrl = "";
 
-        if (compressedData) {
+        // Öncelik 1: Doğrudan URL Parametreleri (c, b, t, o)
+        imageUrl = urlParams.get('c') || urlParams.get('url');      
+        bgUrl = urlParams.get('b') || urlParams.get('photo'); 
+        cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
+        overlayUrl = urlParams.get('o') || urlParams.get('overlay'); 
+
+        // Öncelik 2: Eğer yukarısı boşsa ve Base64 'd' parametresi varsa çöz
+        const compressedData = urlParams.get('d');
+        if (!imageUrl && compressedData) {
             try {
                 let base64 = compressedData.replace(/-/g, '+').replace(/_/g, '/');
                 while (base64.length % 4) { base64 += '='; }
                 const jsonStr = decodeURIComponent(escape(atob(base64)));
                 const payload = JSON.parse(jsonStr);
 
-                imageUrl = payload.c;
-                bgUrl = payload.b;
-                cutoutUrl = payload.t;
-                overlayUrl = payload.o;
+                imageUrl = payload.c || imageUrl;
+                bgUrl = payload.b || bgUrl;
+                cutoutUrl = payload.t || cutoutUrl;
+                overlayUrl = payload.o || overlayUrl;
             } catch (e) { console.error("Base64 Veri Çözme Hatası:", e); }
-        }
-
-        if (!imageUrl) {
-            imageUrl = urlParams.get('c') || urlParams.get('url');      
-            bgUrl = urlParams.get('b') || urlParams.get('photo'); 
-            cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
-            overlayUrl = urlParams.get('o'); 
         }
 
         const bgElement = document.getElementById('bg-image');
@@ -315,16 +315,27 @@
             if (cutoutElement) cutoutElement.style.opacity = '0';
             if (overlayElement) overlayElement.style.opacity = '0';
 
+            // Katman Görsellerini Atama
             bgElement.src = bgUrl || imageUrl;
-            if (cutoutUrl) cutoutElement.src = cutoutUrl; else cutoutElement.removeAttribute('src');
-            if (overlayUrl) overlayElement.src = overlayUrl; else overlayElement.removeAttribute('src');
+            
+            if (cutoutUrl && cutoutUrl !== "null" && cutoutUrl !== "undefined") {
+                cutoutElement.src = cutoutUrl;
+            } else {
+                cutoutElement.removeAttribute('src');
+            }
+
+            if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
+                overlayElement.src = overlayUrl;
+            } else {
+                overlayElement.removeAttribute('src');
+            }
 
             setTimeout(() => {
                 loadingIndicator.style.display = 'none';
                 bgElement.style.opacity = '1';
-                if (cutoutElement.src) cutoutElement.style.opacity = '1';
-                if (overlayElement.src) overlayElement.style.opacity = '1';
-            }, 800);
+                if (cutoutElement.getAttribute('src')) cutoutElement.style.opacity = '1';
+                if (overlayElement.getAttribute('src')) overlayElement.style.opacity = '1';
+            }, 600);
 
             checkIfCurrentCardInVault();
         }
@@ -351,11 +362,9 @@
             openVaultBtn.style.display = 'flex';
         }
 
-        // Kartı Veritabanına Yaz (Benzersiz slice(-30) ID Yöntemi)
         async function saveCardToFirestore(user) {
             if (!user || !imageUrl) return;
             try {
-                // Kullanıcı kaydı
                 await db.collection("users").doc(user.uid).set({
                     name: user.displayName,
                     email: user.email,
@@ -363,7 +372,6 @@
                     lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                // Kart kaydı
                 const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
                 await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
                     imageUrl: imageUrl,
@@ -373,7 +381,6 @@
                     createdAt: new Date().toISOString()
                 }, { merge: true });
 
-                // Varsa yerel hafızadaki kartları da aktar
                 const localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
                 for (const card of localVault) {
                     const localDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
@@ -414,7 +421,6 @@
             }
         }
 
-        // OTURUM AÇILDIĞINDA SADECE ARAYÜZÜ GÜNCELLE (OTOMATİK KAYIT YOK)
         async function handleUserAuthenticated(user) {
             if (!user) return;
             openVaultBtn.style.display = 'flex';
@@ -423,7 +429,6 @@
             authModal.classList.remove('active');
         }
 
-        // MANUEL KOLEKSİYONA EKLEME BUTONU
         vaultBtn.addEventListener('click', async () => {
             saveCardLocally();
             const currentUser = auth.currentUser;
@@ -449,7 +454,6 @@
                 } else {
                     const result = await auth.signInWithPopup(googleProvider);
                     await handleUserAuthenticated(result.user);
-                    // Giriş yapıldıktan sonra kartı otomatik kaydet
                     saveCardLocally();
                     await saveCardToFirestore(result.user);
                     markButtonAsAdded();
@@ -470,7 +474,6 @@
             }
         }).catch((error) => console.error("Redirect Hatası:", error));
 
-        // 🔥 MERKEZİ AUTH DİNLENMESİ (OTOMATİK KAYIT YAPMAZ)
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 vaultAuthWarning.style.display = 'none';
