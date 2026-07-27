@@ -69,9 +69,9 @@
         #bg-image { width: 100%; height: auto; border-radius: 10px; display: block; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; transform: translateZ(0px); }
         #cutout-image, #overlay-image { position: absolute; top: 5px; left: 5px; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
         #cutout-image { transform: translateZ(25px) scale(1.05); z-index: 2; }
-        #overlay-image { transform: translateZ(45px); z-index: 3; }
-        .holo-glare { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 10px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 0, 255, 0.2) 35%, rgba(0, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.4) 100%); opacity: 0; mix-blend-mode: color-dodge; pointer-events: none; transition: opacity 0.3s ease; z-index: 5; transform: translateZ(50px); }
-        .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: var(--arcade-magenta); animation: blink 1s infinite; }
+        #overlay-image { transform: translateZ(45px); z-index: 10; } /* 🔥 Z-INDEX EN ÜSTE ALINDI */
+        .holo-glare { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 10px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 0, 255, 0.2) 35%, rgba(0, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.4) 100%); opacity: 0; mix-blend-mode: color-dodge; pointer-events: none; transition: opacity 0.3s ease; z-index: 12; transform: translateZ(50px); }
+        .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: var(--arcade-magenta); animation: blink 1s infinite; z-index: 1; }
         @keyframes blink { 50% { opacity: 0; } }
 
         /* BUTONLAR */
@@ -259,13 +259,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         let imageUrl = "", bgUrl = "", cutoutUrl = "", overlayUrl = "";
 
-        // Öncelik 1: Doğrudan URL Parametreleri (c, b, t, o)
+        // Doğrudan URL Parametreleri (c, b, t, o)
         imageUrl = urlParams.get('c') || urlParams.get('url');      
         bgUrl = urlParams.get('b') || urlParams.get('photo'); 
         cutoutUrl = urlParams.get('t') || urlParams.get('cutout'); 
         overlayUrl = urlParams.get('o') || urlParams.get('overlay'); 
 
-        // Öncelik 2: Eğer yukarısı boşsa ve Base64 'd' parametresi varsa çöz
         const compressedData = urlParams.get('d');
         if (!imageUrl && compressedData) {
             try {
@@ -305,9 +304,9 @@
         const vaultAuthWarning = document.getElementById('vault-auth-warning');
 
         // -------------------------------------------------------------
-        // 🖼️ 3. EKRANDAKİ KARTI GÜNCELLEME FONKSİYONU
+        // 🖼️ 3. EKRANDAKİ KARTI GÜNCELLEME FONKSİYONU (EVENT-DRIVEN GARANTİLİ YÜKLEME)
         // -------------------------------------------------------------
-function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
+        function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
             imageUrl = c_img; bgUrl = c_bg; cutoutUrl = c_cut; overlayUrl = c_over;
             
             loadingIndicator.style.display = 'block';
@@ -315,31 +314,30 @@ function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
             if (cutoutElement) cutoutElement.style.opacity = '0';
             if (overlayElement) overlayElement.style.opacity = '0';
 
-            // 1. Arka Plan Resmi Yükle
+            // 1. Arka Plan
             if (bgUrl || imageUrl) {
                 bgElement.src = bgUrl || imageUrl;
                 bgElement.onload = () => { bgElement.style.opacity = '1'; };
             }
 
-            // 2. Dekupe Yüz Yükle
+            // 2. Dekupe Karakter
             if (cutoutUrl && cutoutUrl !== "null" && cutoutUrl !== "undefined") {
                 cutoutElement.src = cutoutUrl;
                 cutoutElement.onload = () => { cutoutElement.style.opacity = '1'; };
+            } else {
+                cutoutElement.removeAttribute('src');
             }
 
-            // 3. ÇERÇEVE & KOD KATMANI (OVERLAY) YÜKLE
+            // 3. Çerçeve & Üst Katman (Overlay)
             if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
-                // Görselin yüklenmesini zorla ve yüklenince görünür yap
                 overlayElement.src = overlayUrl;
                 overlayElement.onload = () => { 
                     overlayElement.style.opacity = '1'; 
+                    overlayElement.style.zIndex = '10'; // Her şeyin üstünde durmasını zorlar
                     loadingIndicator.style.display = 'none';
                 };
-                // Eğer Firebase gecikirse tekrar dene
-                overlayElement.onerror = () => {
-                    setTimeout(() => { overlayElement.src = overlayUrl + "?t=" + Date.now(); }, 1000);
-                };
             } else {
+                overlayElement.removeAttribute('src');
                 loadingIndicator.style.display = 'none';
             }
 
