@@ -307,7 +307,7 @@
         // -------------------------------------------------------------
         // 🖼️ 3. EKRANDAKİ KARTI GÜNCELLEME FONKSİYONU
         // -------------------------------------------------------------
-        function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
+function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
             imageUrl = c_img; bgUrl = c_bg; cutoutUrl = c_cut; overlayUrl = c_over;
             
             loadingIndicator.style.display = 'block';
@@ -315,27 +315,33 @@
             if (cutoutElement) cutoutElement.style.opacity = '0';
             if (overlayElement) overlayElement.style.opacity = '0';
 
-            // Katman Görsellerini Atama
-            bgElement.src = bgUrl || imageUrl;
-            
+            // 1. Arka Plan Resmi Yükle
+            if (bgUrl || imageUrl) {
+                bgElement.src = bgUrl || imageUrl;
+                bgElement.onload = () => { bgElement.style.opacity = '1'; };
+            }
+
+            // 2. Dekupe Yüz Yükle
             if (cutoutUrl && cutoutUrl !== "null" && cutoutUrl !== "undefined") {
                 cutoutElement.src = cutoutUrl;
-            } else {
-                cutoutElement.removeAttribute('src');
+                cutoutElement.onload = () => { cutoutElement.style.opacity = '1'; };
             }
 
+            // 3. ÇERÇEVE & KOD KATMANI (OVERLAY) YÜKLE
             if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
+                // Görselin yüklenmesini zorla ve yüklenince görünür yap
                 overlayElement.src = overlayUrl;
+                overlayElement.onload = () => { 
+                    overlayElement.style.opacity = '1'; 
+                    loadingIndicator.style.display = 'none';
+                };
+                // Eğer Firebase gecikirse tekrar dene
+                overlayElement.onerror = () => {
+                    setTimeout(() => { overlayElement.src = overlayUrl + "?t=" + Date.now(); }, 1000);
+                };
             } else {
-                overlayElement.removeAttribute('src');
-            }
-
-            setTimeout(() => {
                 loadingIndicator.style.display = 'none';
-                bgElement.style.opacity = '1';
-                if (cutoutElement.getAttribute('src')) cutoutElement.style.opacity = '1';
-                if (overlayElement.getAttribute('src')) overlayElement.style.opacity = '1';
-            }, 600);
+            }
 
             checkIfCurrentCardInVault();
         }
