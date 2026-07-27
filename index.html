@@ -248,16 +248,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         let imageUrl = "", bgUrl = "", cutoutUrl = "", overlayUrl = "";
 
-        // URL Parametrelerini Çekme (Decode güvenliği eklendi)
-        function cleanParam(val) {
-            if (!val || val === "null" || val === "undefined") return "";
-            try { return decodeURIComponent(val); } catch(e) { return val; }
+        // 🔥 URL PARAMETRE KOPMASINI ENGELLEYEN REGEX YAKALAYICI
+        function getParam(name) {
+            const regex = new RegExp('[?&]' + name + '=([^&]+)');
+            const match = window.location.href.match(regex);
+            if (!match) return "";
+            try {
+                return decodeURIComponent(match[1]);
+            } catch (e) {
+                return match[1];
+            }
         }
 
-        imageUrl = cleanParam(urlParams.get('c') || urlParams.get('url'));      
-        bgUrl = cleanParam(urlParams.get('b') || urlParams.get('photo')); 
-        cutoutUrl = cleanParam(urlParams.get('t') || urlParams.get('cutout')); 
-        overlayUrl = cleanParam(urlParams.get('o') || urlParams.get('overlay')); 
+        imageUrl = getParam('c') || urlParams.get('url') || urlParams.get('c');      
+        bgUrl = getParam('b') || urlParams.get('photo') || urlParams.get('b'); 
+        cutoutUrl = getParam('t') || urlParams.get('cutout') || urlParams.get('t'); 
+        overlayUrl = getParam('o') || urlParams.get('overlay') || urlParams.get('o'); 
 
         const compressedData = urlParams.get('d');
         if (!imageUrl && compressedData) {
@@ -313,7 +319,7 @@
             }
 
             // 2. Dekupe Karakter
-            if (cutoutUrl) {
+            if (cutoutUrl && cutoutUrl !== "null" && cutoutUrl !== "undefined") {
                 cutoutElement.src = cutoutUrl;
                 cutoutElement.onload = () => { cutoutElement.style.opacity = '1'; };
             } else {
@@ -321,7 +327,7 @@
             }
 
             // 3. Çerçeve & Üst Katman (Overlay Z-INDEX Force)
-            if (overlayUrl) {
+            if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
                 overlayElement.src = overlayUrl;
                 overlayElement.onload = () => { 
                     overlayElement.style.opacity = '1'; 
