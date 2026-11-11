@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Paradoks - Kendi Evrenine Hoş Geldin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <title>Waffology - Tatlı Evrenine Hoş Geldin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <!-- 🔥 FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -13,167 +13,224 @@
 
     <style>
         :root {
-            --arcade-cyan: #00ffff;
-            --arcade-magenta: #ff00ff;
-            --arcade-yellow: #ffea00;
-            --dark-bg: #0b001a;
+            --waffle-gold: #ffaa00;
+            --waffle-berry: #ff2a6d;
+            --waffle-cream: #fff5d6;
+            --choco-bg: #160a04;
+            --choco-card: #291308;
         }
 
         body, html {
             margin: 0; padding: 0;
             width: 100vw; min-height: 100vh;
-            background-color: var(--dark-bg);
+            background-color: var(--choco-bg);
+            /* Çapraz Waffle Izgara Dokusu */
             background-image: 
-                linear-gradient(rgba(255, 0, 255, 0.15) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 0, 255, 0.15) 1px, transparent 1px);
-            background-size: 40px 40px; background-position: center bottom;
-            color: white; font-family: 'Orbitron', sans-serif;
+                linear-gradient(45deg, rgba(255, 170, 0, 0.14) 2px, transparent 2px),
+                linear-gradient(-45deg, rgba(255, 170, 0, 0.14) 2px, transparent 2px);
+            background-size: 46px 46px; background-position: center bottom;
+            color: var(--waffle-cream); font-family: 'Fredoka', sans-serif;
             overflow-x: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
         }
 
-        @keyframes moveGrid { 0% { transform: translateY(0) translateZ(0); } 100% { transform: translateY(40px) translateZ(0); } }
+        @keyframes moveGrid { 0% { transform: translateY(0) translateZ(0); } 100% { transform: translateY(46px) translateZ(0); } }
 
         .bg-anim {
-            position: fixed; top: -40px; left: 0; width: 100%; height: calc(100% + 40px);
+            position: fixed; top: -46px; left: 0; width: 100%; height: calc(100% + 46px);
             background-image: inherit; background-size: inherit;
-            animation: moveGrid 3s linear infinite; z-index: -1; opacity: 0.6;
+            animation: moveGrid 3.5s linear infinite; z-index: -1; opacity: 0.7;
         }
 
         .container {
             width: 90%; max-width: 500px;
             display: flex; flex-direction: column; align-items: center;
-            padding-top: 4vh; padding-bottom: 5vh; z-index: 10;
+            padding-top: 5vh; padding-bottom: 6vh; z-index: 10;
         }
 
         .title-arcade {
-            font-family: 'Press Start 2P', cursive; font-size: 1.5rem;
-            color: var(--arcade-yellow); text-shadow: 3px 3px 0px var(--arcade-magenta);
+            font-family: 'Press Start 2P', cursive; font-size: 1.45rem;
+            color: var(--waffle-gold); text-shadow: 3px 3px 0px var(--waffle-berry), 0 0 15px rgba(255, 170, 0, 0.4);
             margin-bottom: 8px; text-align: center; line-height: 1.4;
         }
 
         .subtitle {
-            color: var(--arcade-cyan); font-size: clamp(0.55rem, 3.2vw, 0.85rem); font-weight: 800;
-            margin-bottom: 20px; text-shadow: 0 0 10px var(--arcade-cyan); letter-spacing: 1px; 
+            color: var(--waffle-cream); font-size: clamp(0.65rem, 3.2vw, 0.9rem); font-weight: 700;
+            margin-bottom: 18px; text-shadow: 0 0 10px var(--waffle-gold); letter-spacing: 1px; 
             text-transform: uppercase; white-space: nowrap; width: 100%; text-align: center;
         }
 
-        /* 3D KART STİLLERİ */
-        .card-3d-wrapper { width: 100%; perspective: 900px; margin-bottom: 20px; touch-action: none; }
+        /* 3D KART STİLLERİ (AYNI MEKANİK KORUNDU) */
+        .card-3d-wrapper { width: 100%; perspective: 900px; margin-bottom: 22px; touch-action: none; }
         .image-frame {
-            width: 100%; border: 4px solid var(--arcade-cyan); border-radius: 15px;
-            box-shadow: 0 0 20px var(--arcade-cyan), 0 0 40px var(--arcade-magenta) inset;
-            background-color: #000; padding: 5px; box-sizing: border-box; position: relative;
+            width: 100%; border: 4px solid var(--waffle-gold); border-radius: 16px;
+            box-shadow: 0 0 22px rgba(255, 170, 0, 0.6), 0 0 40px rgba(255, 42, 109, 0.4) inset;
+            background-color: var(--choco-card); padding: 5px; box-sizing: border-box; position: relative;
             transform-style: preserve-3d; transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
             will-change: transform;
         }
-        #bg-image { width: 100%; height: auto; border-radius: 10px; display: block; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; transform: translateZ(0px); }
-        #cutout-image, #overlay-image { position: absolute; top: 5px; left: 5px; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
+        #bg-image { width: 100%; height: auto; border-radius: 11px; display: block; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; transform: translateZ(0px); }
+        #cutout-image, #overlay-image { position: absolute; top: 5px; left: 5px; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 11px; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
         #cutout-image { transform: translateZ(25px) scale(1.05); z-index: 2; }
         #overlay-image { transform: translateZ(45px); z-index: 100 !important; }
-        .holo-glare { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 10px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 0, 255, 0.2) 35%, rgba(0, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.4) 100%); opacity: 0; mix-blend-mode: color-dodge; pointer-events: none; transition: opacity 0.3s ease; z-index: 120; transform: translateZ(50px); }
-        .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: var(--arcade-magenta); animation: blink 1s infinite; z-index: 1; }
+        .holo-glare { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 11px; background: linear-gradient(135deg, rgba(255, 245, 214, 0.4) 0%, rgba(255, 170, 0, 0.25) 35%, rgba(255, 42, 109, 0.2) 70%, rgba(255, 245, 214, 0.4) 100%); opacity: 0; mix-blend-mode: color-dodge; pointer-events: none; transition: opacity 0.3s ease; z-index: 120; transform: translateZ(50px); }
+        .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', cursive; font-size: 0.75rem; color: var(--waffle-gold); animation: blink 1s infinite; z-index: 1; text-align: center; }
         @keyframes blink { 50% { opacity: 0; } }
 
         /* BUTONLAR */
         .btn-group { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .btn-vault { background: linear-gradient(90deg, #00ffcc, #009933); color: #000; font-family: Arial, sans-serif; font-weight: 900; font-size: 1.05rem; padding: 14px 20px; border: 2px solid white; border-radius: 30px; box-shadow: 0 0 15px #00ffcc; cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; animation: pulse-green 2s infinite; }
-        @keyframes pulse-green { 0% { box-shadow: 0 0 10px #00ffcc; } 50% { box-shadow: 0 0 25px #009933, inset 0 0 10px #00ffcc; } 100% { box-shadow: 0 0 10px #00ffcc; } }
-        .btn-vault:active { transform: scale(0.95); }
-        .btn-buy-physical { background: linear-gradient(90deg, #ffcc00, #ff6600); color: #000; font-family: Arial, sans-serif; font-weight: 900; font-size: 1.05rem; padding: 14px 20px; border: 2px solid white; border-radius: 30px; box-shadow: 0 0 15px #ffcc00; cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; animation: pulse-gold 2s infinite; }
-        @keyframes pulse-gold { 0% { box-shadow: 0 0 10px #ffcc00; } 50% { box-shadow: 0 0 25px #ff6600, inset 0 0 10px #ffcc00; } 100% { box-shadow: 0 0 10px #ffcc00; } }
-        .btn-buy-physical:active { transform: scale(0.95); }
-        .btn-download { background: linear-gradient(90deg, var(--arcade-magenta), #cc00cc); color: white; font-family: Arial, sans-serif; font-weight: 900; font-size: 1rem; padding: 12px 20px; border: 2px solid white; border-radius: 30px; box-shadow: 0 0 15px var(--arcade-magenta); cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; }
-        .btn-download-photo { background: rgba(0, 0, 0, 0.6); color: var(--arcade-cyan); font-family: Arial, sans-serif; font-weight: 900; font-size: 0.95rem; padding: 12px 20px; border: 2px solid var(--arcade-cyan); border-radius: 30px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.4); cursor: pointer; width: 85%; text-transform: uppercase; transition: transform 0.1s; text-decoration: none; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px; }
-        .btn-download:active, .btn-download-photo:active { transform: scale(0.95); }
-        .download-icon { width: 20px; height: 20px; fill: currentColor; }
-        .hint { margin-top: 15px; font-size: 0.8rem; color: #aaa; text-align: center; line-height: 1.5; font-family: 'Orbitron', sans-serif; }
-
-        /* 🔐 MODALLAR (AUTH & VAULT) */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease; }
-        .modal-overlay.active { display: flex; opacity: 1; }
-        .modal-content { background: var(--dark-bg); border: 3px solid var(--arcade-cyan); border-radius: 15px; padding: 30px 20px; width: 85%; max-width: 400px; text-align: center; box-shadow: 0 0 30px rgba(0, 255, 255, 0.4), inset 0 0 20px rgba(255, 0, 255, 0.2); display: flex; flex-direction: column; gap: 15px; font-family: 'Orbitron', sans-serif; position: relative;}
-        .modal-content h2 { font-family: 'Press Start 2P', cursive; font-size: 1.1rem; color: var(--arcade-yellow); text-shadow: 2px 2px 0px var(--arcade-magenta); margin: 0; line-height: 1.4; }
-        .modal-content p { color: #fff; font-size: 0.9rem; line-height: 1.5; margin: 0; }
-        .btn-google { background: #fff; color: #000; font-family: Arial, sans-serif; font-weight: bold; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 15px rgba(255,255,255,0.4); transition: transform 0.1s; }
-        .btn-google:active { transform: scale(0.95); }
-        .btn-google img { width: 20px; height: 20px; }
-        .btn-close-modal { background: transparent; color: #aaa; border: none; font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding-top: 10px; font-family: 'Orbitron', sans-serif; }
         
+        /* Paylaş Butonu */
+        .btn-share {
+            background: linear-gradient(90deg, var(--waffle-gold), #ff6600);
+            color: var(--choco-bg); font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.05rem;
+            padding: 14px 20px; border: 2px solid var(--waffle-cream); border-radius: 30px;
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.6); cursor: pointer; width: 85%;
+            text-transform: uppercase; transition: transform 0.1s; text-decoration: none;
+            text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+            animation: pulse-gold 2s infinite; box-sizing: border-box;
+        }
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 10px var(--waffle-gold); } 50% { box-shadow: 0 0 25px #ff6600, inset 0 0 10px var(--waffle-gold); } 100% { box-shadow: 0 0 10px var(--waffle-gold); } }
+        .btn-share:active { transform: scale(0.95); }
+
+        /* İndirme Butonları */
+        .btn-download {
+            background: linear-gradient(90deg, var(--waffle-berry), #b80040);
+            color: var(--waffle-cream); font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1rem;
+            padding: 13px 20px; border: 2px solid var(--waffle-cream); border-radius: 30px;
+            box-shadow: 0 0 15px rgba(255, 42, 109, 0.5); cursor: pointer; width: 85%;
+            text-transform: uppercase; transition: transform 0.1s; text-decoration: none;
+            text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-sizing: border-box;
+        }
+        .btn-download-photo {
+            background: rgba(41, 19, 8, 0.85); color: var(--waffle-gold);
+            font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem;
+            padding: 12px 20px; border: 2px solid var(--waffle-gold); border-radius: 30px;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.25); cursor: pointer; width: 85%;
+            text-transform: uppercase; transition: transform 0.1s; text-decoration: none;
+            text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Fiziksel Satın Al Butonu (Daha Aşağıda & Ayırıcı Çizgili) */
+        .physical-buy-divider {
+            width: 75%; height: 1px; background: rgba(255, 170, 0, 0.25);
+            margin: 10px 0 4px 0;
+        }
+        .btn-buy-physical {
+            background: linear-gradient(90deg, #4a210b, #291308);
+            color: var(--waffle-cream); font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem;
+            padding: 13px 20px; border: 2px dashed var(--waffle-gold); border-radius: 30px;
+            box-shadow: 0 0 12px rgba(255, 170, 0, 0.25); cursor: pointer; width: 85%;
+            text-transform: uppercase; transition: transform 0.1s; text-decoration: none;
+            text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-sizing: border-box;
+        }
+
+        .btn-download:active, .btn-download-photo:active, .btn-buy-physical:active { transform: scale(0.95); }
+        .btn-icon { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; }
+        .hint { margin-top: 16px; font-size: 0.85rem; color: #d2b48c; text-align: center; line-height: 1.5; }
+
+        /* 🎒 SAĞ ÜST KUTUM & GİRİŞ BUTONU */
         .btn-open-vault {
             position: fixed; top: 15px; right: 15px; z-index: 100;
-            background: linear-gradient(135deg, var(--arcade-magenta), var(--arcade-cyan));
-            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 0.6rem;
-            padding: 10px 15px; border: 2px solid white; border-radius: 12px;
-            cursor: pointer; box-shadow: 0 0 15px var(--arcade-cyan);
-            display: none; align-items: center; gap: 8px; transition: transform 0.1s;
+            background: linear-gradient(135deg, var(--waffle-berry), var(--waffle-gold));
+            color: var(--choco-bg); font-family: 'Press Start 2P', cursive; font-size: 0.6rem;
+            padding: 10px 14px; border: 2px solid var(--waffle-cream); border-radius: 12px;
+            cursor: pointer; box-shadow: 0 0 15px rgba(255, 170, 0, 0.6);
+            display: flex; align-items: center; gap: 8px; transition: transform 0.1s;
         }
         .btn-open-vault:active { transform: scale(0.95); }
 
+        /* Otomatik Kayıt Bildirim Rozeti (Toast) */
+        .toast-badge {
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%) translateY(80px);
+            background: var(--choco-card); border: 2px solid var(--waffle-gold);
+            color: var(--waffle-cream); padding: 10px 20px; border-radius: 25px;
+            font-weight: 700; font-size: 0.85rem; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 10000; opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none; white-space: nowrap;
+        }
+        .toast-badge.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* 🔐 MODALLAR (AUTH & VAULT) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 6, 2, 0.88); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content { background: var(--choco-card); border: 3px solid var(--waffle-gold); border-radius: 18px; padding: 30px 20px; width: 85%; max-width: 400px; text-align: center; box-shadow: 0 0 30px rgba(255, 170, 0, 0.35), inset 0 0 20px rgba(255, 42, 109, 0.2); display: flex; flex-direction: column; gap: 15px; position: relative;}
+        .modal-content h2 { font-family: 'Press Start 2P', cursive; font-size: 1.05rem; color: var(--waffle-gold); text-shadow: 2px 2px 0px var(--waffle-berry); margin: 0; line-height: 1.4; }
+        .modal-content p { color: var(--waffle-cream); font-size: 0.9rem; line-height: 1.5; margin: 0; }
+        
         .vault-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 15px; max-height: 50vh; overflow-y: auto; padding: 10px;
-            margin-top: 10px; border-top: 1px solid rgba(0, 255, 255, 0.3);
+            margin-top: 10px; border-top: 1px solid rgba(255, 170, 0, 0.3);
         }
         .vault-item {
-            border: 2px solid var(--arcade-magenta); border-radius: 10px;
+            border: 2px solid var(--waffle-gold); border-radius: 10px;
             overflow: hidden; cursor: pointer; position: relative;
-            background: #000; box-shadow: 0 0 10px rgba(255,0,255,0.3);
+            background: #000; box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
             transition: transform 0.2s, border-color 0.2s;
         }
-        .vault-item:hover { transform: scale(1.05); border-color: var(--arcade-yellow); z-index: 2;}
+        .vault-item:hover { transform: scale(1.05); border-color: var(--waffle-berry); z-index: 2;}
         .vault-item img { width: 100%; aspect-ratio: 9/16; object-fit: cover; display: block; }
-        .empty-vault { text-align: center; color: #aaa; font-family: 'Orbitron', sans-serif; font-size: 0.9rem; grid-column: 1 / -1; padding: 20px 0; }
+        .empty-vault { text-align: center; color: #d2b48c; font-size: 0.9rem; grid-column: 1 / -1; padding: 20px 0; }
         .vault-close-icon {
-            position: absolute; top: -15px; right: -15px; background: #ff0055;
-            color: white; border: 2px solid #fff; border-radius: 50%;
+            position: absolute; top: -15px; right: -15px; background: var(--waffle-berry);
+            color: white; border: 2px solid var(--waffle-cream); border-radius: 50%;
             width: 35px; height: 35px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 10px #ff0055; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 10px var(--waffle-berry); display: flex; align-items: center; justify-content: center;
         }
         
         .vault-warning-box {
-            background: rgba(255, 234, 0, 0.1);
-            border: 1px dashed var(--arcade-yellow);
-            color: var(--arcade-yellow);
-            font-size: 0.75rem;
-            padding: 10px;
-            border-radius: 8px;
+            background: rgba(255, 170, 0, 0.12);
+            border: 1px dashed var(--waffle-gold);
+            color: var(--waffle-gold);
+            font-size: 0.8rem;
+            padding: 12px;
+            border-radius: 10px;
             line-height: 1.4;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
             align-items: center;
         }
         .btn-inline-google {
-            background: #fff;
-            color: #000;
-            font-family: Arial, sans-serif;
-            font-weight: 900;
-            font-size: 0.75rem;
-            padding: 8px 12px;
+            background: var(--waffle-cream);
+            color: var(--choco-bg);
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 10px 16px;
             border-radius: 20px;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            gap: 8px;
+            box-shadow: 0 0 12px rgba(255, 245, 214, 0.5);
+            transition: transform 0.1s;
         }
-        .btn-inline-google img { width: 14px; height: 14px; }
+        .btn-inline-google:active { transform: scale(0.95); }
+        .btn-inline-google img { width: 16px; height: 16px; }
     </style>
 </head>
 <body>
 
     <div class="bg-anim"></div>
 
-    <button id="open-vault-btn" class="btn-open-vault">🎒 KASAM</button>
+    <!-- Sağ Üst Kutu Butonu -->
+    <button id="open-vault-btn" class="btn-open-vault">🧇 KUTUM</button>
+
+    <!-- Bildirim Rozeti -->
+    <div id="toast-badge" class="toast-badge">✨ Koleksiyonuna Eklendi!</div>
 
     <div class="container">
-        <h1 class="title-arcade">MISSION<br>COMPLETE</h1>
+        <h1 class="title-arcade">AFİYET<br>OLSUN!</h1>
         <div class="subtitle">✨ KARTINI İNCELEMEK İÇİN SÜRÜKLE ✨</div>
 
         <div class="card-3d-wrapper" id="card-wrapper">
             <div class="image-frame" id="image-frame">
-                <div class="loading-text" id="loading-indicator">YÜKLENİYOR...</div>
+                <div class="loading-text" id="loading-indicator">FIRINDAN ÇIKIYOR...</div>
                 <img id="bg-image" src="" alt="Arka Plan">
                 <img id="cutout-image" src="" alt="3D Karakter">
                 <img id="overlay-image" src="" alt="Arayüz Katmanı">
@@ -182,45 +239,46 @@
         </div>
 
         <div class="btn-group">
-            <button id="vault-btn" class="btn-vault">🏆 KOLEKSİYONUMA EKLE</button>
-            <a id="buy-physical-btn" class="btn-buy-physical" href="#" target="_blank">📦 KARTI FİZİKSEL SATIN AL</a>
+            <!-- 1. Paylaş Butonu -->
+            <button id="share-btn" class="btn-share">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                KARTINI PAYLAŞ
+            </button>
+
+            <!-- 2. Kartı İndir -->
             <a id="download-btn" class="btn-download" href="#" target="_blank">
-                <svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                RPG KARTINI İNDİR
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                WAFFOLOGY KARTINI İNDİR
             </a>
+
+            <!-- 3. Sadece Fotoğrafı İndir -->
             <a id="download-photo-btn" class="btn-download-photo" href="#" target="_blank">
-                <svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                 🖼️ SADECE FOTOĞRAFI İNDİR
             </a>
-        </div>
-        <p class="hint">İndirme butonları çalışmazsa,<br>görselin üzerine basılı tutarak<br><strong>"Fotoğraflara Kaydet"</strong> diyebilirsin.</p>
-    </div>
 
-    <!-- 🔐 GİRİŞ MODALI -->
-    <div id="auth-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>KENDİ EVRENİNE<br>KATIL</h2>
-            <p>Kartını kaybetmemek ve dijital envanterini görmek için giriş yap.</p>
-            <button id="google-login-btn" class="btn-google">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
-                Google ile Devam Et
-            </button>
-            <button id="close-modal-btn" class="btn-close-modal">Şimdilik Geç</button>
+            <!-- 4. Fiziksel Satın Al (En Altta) -->
+            <div class="physical-buy-divider" id="buy-divider"></div>
+            <a id="buy-physical-btn" class="btn-buy-physical" href="#" target="_blank">
+                📦 KARTI FİZİKSEL SATIN AL
+            </a>
         </div>
+
+        <p class="hint">İndirme butonları çalışmazsa,<br>görselin üzerine basılı tutarak<br><strong>"Fotoğraflara Kaydet"</strong> diyebilirsin.</p>
     </div>
 
     <!-- 🎒 ENVANTER (VAULT) MODALI -->
     <div id="vault-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px; padding: 25px 15px;">
             <button id="close-vault-modal" class="vault-close-icon">X</button>
-            <h2>KİŞİSEL KASAN</h2>
-            <p style="font-size: 0.75rem; color: #ccc;">Geçmişte çıkardığın tüm RPG kartların burada saklanır. İncelemek için birine tıkla!</p>
+            <h2>WAFFOLOGY KUTUN</h2>
+            <p style="font-size: 0.8rem; color: #f5deb3;">Geçmişte çıkardığın tüm Waffology kartların burada saklanır. İncelemek için birine tıkla!</p>
             
             <div id="vault-auth-warning" class="vault-warning-box" style="display:none;">
-                <span>⚠️ Sekmeyi kapatırsan kartlar silinebilir! Kalıcı yapmak için:</span>
+                <span>⚠️ Tarayıcı geçmişini silersen kartların kaybolabilir! Hesabına giriş yaptığında tüm kartların <strong>otomatik olarak</strong> kalıcı koleksiyonuna eklenir:</span>
                 <button id="inline-google-login-btn" class="btn-inline-google">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
-                    Google ile Hesabına Kaydet
+                    Google ile Giriş Yap & Kaydet
                 </button>
             </div>
 
@@ -284,24 +342,28 @@
         const cutoutElement = document.getElementById('cutout-image'); 
         const overlayElement = document.getElementById('overlay-image'); 
         
+        const shareBtn = document.getElementById('share-btn');
         const downloadBtn = document.getElementById('download-btn');
         const downloadPhotoBtn = document.getElementById('download-photo-btn');
         const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
-        const vaultBtn = document.getElementById('vault-btn');
+        const buyDivider = document.getElementById('buy-divider');
         const loadingIndicator = document.getElementById('loading-indicator');
+        const toastBadge = document.getElementById('toast-badge');
 
         const SHOPIER_URL = "https://www.shopier.com/paradokskiosk/49269215";
 
-        const authModal = document.getElementById('auth-modal');
-        const closeModalBtn = document.getElementById('close-modal-btn');
-        const googleLoginBtn = document.getElementById('google-login-btn');
         const inlineGoogleLoginBtn = document.getElementById('inline-google-login-btn');
-
         const openVaultBtn = document.getElementById('open-vault-btn');
         const vaultModal = document.getElementById('vault-modal');
         const closeVaultModalBtn = document.getElementById('close-vault-modal');
         const vaultGrid = document.getElementById('vault-grid');
         const vaultAuthWarning = document.getElementById('vault-auth-warning');
+
+        function showToast(msg) {
+            toastBadge.innerText = msg;
+            toastBadge.classList.add('show');
+            setTimeout(() => { toastBadge.classList.remove('show'); }, 3000);
+        }
 
         // 🔥 GARANTİLİ 3D KATMAN YÜKLEYİCİ
         function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
@@ -315,7 +377,12 @@
             // 1. Arka Plan
             if (bgUrl || imageUrl) {
                 bgElement.src = bgUrl || imageUrl;
-                bgElement.onload = () => { bgElement.style.opacity = '1'; };
+                bgElement.onload = () => { 
+                    bgElement.style.opacity = '1'; 
+                    if (!overlayUrl || overlayUrl === "null" || overlayUrl === "undefined") {
+                        loadingIndicator.style.display = 'none';
+                    }
+                };
             }
 
             // 2. Dekupe Karakter
@@ -326,7 +393,7 @@
                 cutoutElement.removeAttribute('src');
             }
 
-            // 3. Çerçeve & Üst Katman (Overlay Z-INDEX Force)
+            // 3. Çerçeve & Üst Katman
             if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
                 overlayElement.src = overlayUrl;
                 overlayElement.onload = () => { 
@@ -338,10 +405,9 @@
                 overlayElement.removeAttribute('src');
                 loadingIndicator.style.display = 'none';
             }
-
-            checkIfCurrentCardInVault();
         }
 
+        // Cihaz Hafızasına (LocalStorage) Otomatik Kayıt
         function saveCardLocally() {
             if (!imageUrl) return;
             const cardData = {
@@ -358,11 +424,11 @@
                 vault.push(cardData);
                 localStorage.setItem('paradoks_vault', JSON.stringify(vault));
             }
-            openVaultBtn.style.display = 'flex';
         }
 
-        async function saveCardToFirestore(user) {
-            if (!user || !imageUrl) return;
+        // Hesaba Giriş Yapıldığında Hem Mevcut Kartı Hem Geçmiş Local Kartları Otomatik Firestore'a Aktarır
+        async function syncCardsToFirestore(user) {
+            if (!user) return;
             try {
                 await db.collection("users").doc(user.uid).set({
                     name: user.displayName,
@@ -371,64 +437,23 @@
                     lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                const cardDocId = btoa(imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
-                await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
-                    imageUrl: imageUrl,
-                    bgUrl: bgUrl || "",
-                    cutoutUrl: cutoutUrl || "",
-                    overlayUrl: overlayUrl || "",
-                    createdAt: new Date().toISOString()
-                }, { merge: true });
-            } catch (e) { console.error("Firestore Kayıt Hatası:", e); }
+                // Localdeki tüm kartları ve mevcut kartı tek listede topla
+                saveCardLocally();
+                let localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+
+                for (const card of localVault) {
+                    if (!card.imageUrl) continue;
+                    const cardDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
+                    await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
+                        imageUrl: card.imageUrl,
+                        bgUrl: card.bgUrl || "",
+                        cutoutUrl: card.cutoutUrl || "",
+                        overlayUrl: card.overlayUrl || "",
+                        createdAt: card.date || new Date().toISOString()
+                    }, { merge: true });
+                }
+            } catch (e) { console.error("Firestore Otomatik Kayıt Hatası:", e); }
         }
-
-        function markButtonAsAdded() {
-            vaultBtn.innerHTML = "✅ KASANDA MEVCUT";
-            vaultBtn.style.background = "linear-gradient(90deg, #333, #111)";
-            vaultBtn.style.color = "#00ffcc";
-            vaultBtn.style.boxShadow = "none";
-        }
-
-        async function checkIfCurrentCardInVault() {
-            if (!imageUrl) return;
-            vaultBtn.innerHTML = "🏆 KOLEKSİYONUMA EKLE";
-            vaultBtn.style.background = ""; vaultBtn.style.color = "#000";
-
-            const user = auth.currentUser;
-            if (user) {
-                const snapshot = await db.collection("users").doc(user.uid).collection("vault").where("imageUrl", "==", imageUrl).get();
-                if (!snapshot.empty) markButtonAsAdded();
-            } else {
-                let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
-                if (vault.some(card => card.imageUrl === imageUrl)) markButtonAsAdded();
-            }
-        }
-
-        async function handleUserAuthenticated(user) {
-            if (!user) return;
-            openVaultBtn.style.display = 'flex';
-            vaultAuthWarning.style.display = 'none';
-            await checkIfCurrentCardInVault();
-            authModal.classList.remove('active');
-        }
-
-        vaultBtn.addEventListener('click', async () => {
-            saveCardLocally();
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                await saveCardToFirestore(currentUser);
-                markButtonAsAdded();
-                openVaultBtn.click();
-            } else {
-                authModal.classList.add('active');
-            }
-        });
-
-        closeModalBtn.addEventListener('click', () => { 
-            authModal.classList.remove('active'); 
-            checkIfCurrentCardInVault();
-            openVaultBtn.style.display = 'flex';
-        });
 
         async function triggerGoogleLogin() {
             try {
@@ -436,41 +461,37 @@
                     await auth.signInWithRedirect(googleProvider);
                 } else {
                     const result = await auth.signInWithPopup(googleProvider);
-                    await handleUserAuthenticated(result.user);
-                    saveCardLocally();
-                    await saveCardToFirestore(result.user);
-                    markButtonAsAdded();
-                    openVaultBtn.click();
+                    await syncCardsToFirestore(result.user);
+                    showToast("✅ Hesabına Bağlandı & Koleksiyona Eklendi!");
+                    if (vaultModal.classList.contains('active')) {
+                        loadVaultContents(result.user);
+                    }
                 }
             } catch (error) { console.error("Giriş Hatası:", error); }
         }
 
-        googleLoginBtn.addEventListener('click', triggerGoogleLogin);
         inlineGoogleLoginBtn.addEventListener('click', triggerGoogleLogin);
 
+        // Kullanıcı oturum durumu değiştiğinde (veya giriş yaptığında) otomatik kaydet
         auth.onAuthStateChanged(async (user) => {
+            saveCardLocally();
             if (user) {
                 vaultAuthWarning.style.display = 'none';
-                await handleUserAuthenticated(user);
+                await syncCardsToFirestore(user);
+                if (imageUrl) showToast("🧇 Kartın Koleksiyonuna Otomatik Eklendi!");
             } else {
                 vaultAuthWarning.style.display = 'flex';
-                let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
-                if(vault.length > 0) openVaultBtn.style.display = 'flex';
-                checkIfCurrentCardInVault();
             }
         });
 
-        openVaultBtn.addEventListener('click', async () => {
-            vaultModal.classList.add('active');
+        async function loadVaultContents(user) {
             vaultGrid.innerHTML = "<p class='empty-vault'>Koleksiyon Yükleniyor...</p>";
-            const user = auth.currentUser;
-            
             if (user) {
                 vaultAuthWarning.style.display = 'none';
                 try {
                     const snapshot = await db.collection("users").doc(user.uid).collection("vault").orderBy("createdAt", "desc").get();
                     if (snapshot.empty) {
-                        vaultGrid.innerHTML = "<p class='empty-vault'>Koleksiyonun boş!</p>";
+                        vaultGrid.innerHTML = "<p class='empty-vault'>Kutun henüz boş!</p>";
                         return;
                     }
                     vaultGrid.innerHTML = "";
@@ -480,6 +501,11 @@
                 vaultAuthWarning.style.display = 'flex';
                 renderLocalVault();
             }
+        }
+
+        openVaultBtn.addEventListener('click', () => {
+            vaultModal.classList.add('active');
+            loadVaultContents(auth.currentUser);
         });
 
         function renderLocalVault() {
@@ -495,7 +521,7 @@
         function renderVaultItem(card) {
             const item = document.createElement('div');
             item.className = 'vault-item';
-            item.innerHTML = `<img src="${card.imageUrl}" alt="Paradoks Kartı">`;
+            item.innerHTML = `<img src="${card.imageUrl}" alt="Waffology Kartı">`;
             item.addEventListener('click', () => {
                 updateDisplayCard(card.imageUrl, card.bgUrl, card.cutoutUrl, card.overlayUrl);
                 vaultModal.classList.remove('active');
@@ -505,12 +531,37 @@
 
         closeVaultModalBtn.addEventListener('click', () => vaultModal.classList.remove('active'));
 
+        // 🚀 PAYLAŞ BUTONU İŞLEVİ (Web Share API + Link Kopyalama Fallback)
+        shareBtn.addEventListener('click', async () => {
+            const shareData = {
+                title: 'Waffology RPG Kartım!',
+                text: 'Waffology Kiosk\'ta çıkardığım 3D karakter kartıma göz at! 🧇✨',
+                url: window.location.href
+            };
+
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.log("Paylaşım iptal edildi:", err);
+                }
+            } else {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    showToast("🔗 Kart Linki Kopyalandı!");
+                } catch (err) {
+                    prompt("Kart linkini kopyala:", window.location.href);
+                }
+            }
+        });
+
         if (imageUrl) {
+            saveCardLocally();
             updateDisplayCard(imageUrl, bgUrl, cutoutUrl, overlayUrl);
 
             buyPhysicalBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                alert("Shopier güvenli ödeme sayfasına yönlendiriliyorsunuz.\n\nSiparişinizin doğru basılabilmesi için lütfen Sipariş Notu kısmına resimdeki #PRDX ile başlayan kart kodunuzu yazmayı unutmayın!");
+                alert("Shopier güvenli ödeme sayfasına yönlendiriliyorsunuz.\n\nSiparişinizin doğru basılabilmesi için lütfen Sipariş Notu kısmına resimdeki #WAFF ile başlayan kart kodunuzu yazmayı unutmayın!");
                 window.open(`${SHOPIER_URL}?image_url=${encodeURIComponent(imageUrl)}`, '_blank');
             });
             downloadBtn.addEventListener('click', function(e) {
@@ -522,12 +573,16 @@
                 window.open(bgUrl ? bgUrl : imageUrl, '_blank');
             });
         } else {
-            loadingIndicator.innerText = "FOTOĞRAF BULUNAMADI"; loadingIndicator.style.color = "red";
-            downloadBtn.style.display = "none"; downloadPhotoBtn.style.display = "none";
-            buyPhysicalBtn.style.display = "none"; vaultBtn.style.display = "none";
+            loadingIndicator.innerText = "KART BULUNAMADI";
+            loadingIndicator.style.color = "var(--waffle-berry)";
+            shareBtn.style.display = "none";
+            downloadBtn.style.display = "none";
+            downloadPhotoBtn.style.display = "none";
+            buyPhysicalBtn.style.display = "none";
+            buyDivider.style.display = "none";
         }
 
-        // 3D Parallax
+        // 3D Parallax İnceleme Mekaniği (Aynen Korundu)
         const wrapper = document.getElementById('card-wrapper');
         const frame = document.getElementById('image-frame');
         const glare = document.getElementById('holo-glare');
@@ -549,7 +604,7 @@
             const glareX = ((x - rect.left) / rect.width) * 100; 
             const glareY = ((y - rect.top) / rect.height) * 100;
             glare.style.opacity = '0.65';
-            glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.8) 0%, rgba(255,0,255,0.3) 30%, rgba(0,255,255,0.1) 60%, transparent 80%)`;
+            glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,245,214,0.8) 0%, rgba(255,170,0,0.3) 30%, rgba(255,42,109,0.15) 60%, transparent 80%)`;
         }
 
         function resetCard() {
