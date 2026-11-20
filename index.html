@@ -2,775 +2,525 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waffology Arcade Kiosk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Waffology - Tatlı Evrenine Hoş Geldin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- 🔥 FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <style>
 :root{
   --pink:#e266a3; --pink-deep:#b94a85; --pink-soft:#f6c3dc; --pink-wash:#fdeaf3;
   --waffle-gold:var(--pink); --waffle-berry:var(--pink); --waffle-cream:#fff;
   --choco-bg:#000; --choco-card:#fff;
-  --cell:64px;
+  --cell:48px;
   --drip:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 60'%3E%3Cpath fill='%23e266a3' d='M0 0H240V8H219q-8 0-8 8v22a6 6 0 0 1-12 0v-22q0-8-8-8H132q-8 0-8 8v38a6 6 0 0 1-12 0v-38q0-8-8-8H60q-8 0-8 8v14a6 6 0 0 1-12 0v-14q0-8-8-8H0Z'/%3E%3C/svg%3E");
 }
+*{-webkit-tap-highlight-color:transparent}
 body,html{
-  margin:0;padding:0;width:100vw;height:100vh;background-color:#000;
+  margin:0;padding:0;width:100vw;min-height:100vh;
+  background-color:#000;
   background-image:
-    linear-gradient(rgba(226,102,163,.20) 3px,transparent 3px),
-    linear-gradient(90deg,rgba(226,102,163,.20) 3px,transparent 3px),
-    radial-gradient(circle at 50% 50%,rgba(226,102,163,.09) 0 22px,transparent 24px);
+    linear-gradient(rgba(226,102,163,.20) 2px,transparent 2px),
+    linear-gradient(90deg,rgba(226,102,163,.20) 2px,transparent 2px),
+    radial-gradient(circle at 50% 50%,rgba(226,102,163,.09) 0 15px,transparent 17px);
   background-size:var(--cell) var(--cell);
-  color:#fff;font-family:'Nunito',sans-serif;overflow:hidden;box-sizing:border-box;animation:moveGrid 8s linear infinite}
-@keyframes moveGrid{0%{background-position:0 0}100%{background-position:0 var(--cell)}}
-@keyframes blink{50%{opacity:.25}}
+  color:#fff;font-family:'Nunito',sans-serif;
+  overflow-x:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+}
+@keyframes moveGrid{0%{transform:translateY(0)}100%{transform:translateY(var(--cell))}}
+.bg-anim{position:fixed;top:calc(var(--cell) * -1);left:0;width:100%;height:calc(100% + var(--cell));
+  background-image:inherit;background-size:inherit;animation:moveGrid 6s linear infinite;z-index:-1;opacity:.8}
 
-/* Üstten akan şurup: tüm ekranlarda sabit */
-.drip-bar{position:fixed;top:0;left:0;width:100%;height:22px;background:var(--pink);z-index:60;pointer-events:none}
-.drip-bar::after{content:"";position:absolute;left:0;right:0;top:100%;margin-top:-1px;height:90px;background:var(--drip) repeat-x 0 0/360px 90px}
+/* Üst bant: pembe şerit + akan şurup */
+.brand-bar{position:absolute;top:0;left:0;width:100%;height:56px;background:var(--pink);
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-sizing:border-box;z-index:50}
+.brand-bar::after{content:"";position:absolute;left:0;right:0;top:100%;margin-top:-1px;height:60px;
+  background:var(--drip) repeat-x 0 0/240px 60px;pointer-events:none}
+.brand-word{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.7rem;color:#000;letter-spacing:-.5px;line-height:1;text-transform:lowercase;padding-top:2px}
+.btn-open-vault{position:relative;z-index:2;display:flex;align-items:center;gap:7px;background:#000;color:#fff;
+  font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1rem;padding:6px 14px 6px 11px;border:0;border-radius:999px;cursor:pointer;transition:transform .1s}
+.btn-open-vault svg{width:18px;height:18px}
+.btn-open-vault:active{transform:scale(.94)}
 
-.screen{display:none;flex-direction:column;justify-content:space-evenly;align-items:center;width:100%;height:100%;text-align:center;opacity:0;transition:opacity .3s ease-in-out;position:absolute;top:0;left:0;padding:10vh 2vw 2vh;z-index:10;box-sizing:border-box}
-.screen.active{display:flex;opacity:1}
+.container{width:90%;max-width:500px;display:flex;flex-direction:column;align-items:center;padding-top:128px;padding-bottom:6vh;z-index:10}
+.title-arcade{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:3.6rem;line-height:.9;letter-spacing:-1.5px;
+  color:#fff;text-shadow:0 5px 0 var(--pink);margin:0 0 12px;text-align:center}
+.subtitle{color:rgba(255,255,255,.82);font-size:1rem;font-weight:700;margin-bottom:22px;text-align:center;width:100%}
 
-.title-arcade{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:clamp(4rem,11vw,8rem);line-height:.85;letter-spacing:-3px;text-transform:lowercase;color:#fff;text-shadow:0 8px 0 var(--pink);margin:0}
-.title-small{font-size:clamp(3rem,8vw,5rem);text-shadow:0 6px 0 var(--pink)}
-.insert-coin{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:clamp(1.5rem,3.2vw,2.3rem);color:#fff;margin:0;transition:opacity .3s ease,color .3s ease}
-.credit-display{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.9rem;line-height:1;color:#000;background:var(--pink);padding:8px 26px 4px;border-radius:999px;margin-top:5px}
+.card-3d-wrapper{width:100%;perspective:900px;margin-bottom:26px;touch-action:none}
+.image-frame{width:100%;min-height:360px;border:5px solid #fff;border-radius:20px;background:#000;padding:0;box-sizing:border-box;position:relative;
+  box-shadow:9px 9px 0 var(--pink);transform-style:preserve-3d;transition:transform .15s ease-out;will-change:transform}
+#bg-image{width:100%;height:auto;border-radius:14px;display:block;opacity:0;transition:opacity .5s ease;pointer-events:none;transform:translateZ(0)}
+#cutout-image,#overlay-image{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:14px;pointer-events:none;opacity:0;transition:opacity .5s ease}
+#cutout-image{transform:translateZ(25px) scale(1.05);z-index:2}
+#overlay-image{transform:translateZ(45px);z-index:100!important}
+.holo-glare{position:absolute;inset:0;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,255,255,.4) 0%,rgba(226,102,163,.25) 40%,rgba(255,255,255,.2) 70%,rgba(226,102,163,.3) 100%);
+  opacity:0;mix-blend-mode:color-dodge;pointer-events:none;transition:opacity .3s ease;z-index:120;transform:translateZ(50px)}
+.loading-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.25rem;
+  color:var(--pink);animation:blink 1s infinite;z-index:1;text-align:center;width:85%;line-height:1.3}
+@keyframes blink{50%{opacity:.2}}
 
-.mirror-container{display:none;position:relative;height:52vh;max-width:95vw;aspect-ratio:9/16;border:6px solid #fff;border-radius:28px;box-shadow:10px 10px 0 var(--pink);background:#000;overflow:hidden}
-#live-stream{position:absolute;top:50%;left:50%;width:52vh;aspect-ratio:16/9;object-fit:cover;transform:translate(-50%,-50%) rotate(-90deg) scaleY(-1)}
-.focus-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;height:45%;border:3px dashed rgba(255,255,255,.85);border-radius:24px;z-index:3}
-#countdown-display{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Baloo 2',sans-serif;font-weight:800;font-size:8rem;color:#fff;text-shadow:0 8px 0 var(--pink),0 0 30px #000;z-index:20;animation:popIn 1s infinite}
-@keyframes popIn{0%{transform:translate(-50%,-50%) scale(.5);opacity:0}50%{transform:translate(-50%,-50%) scale(1.1);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+/* Butonlar: tuş gibi, altında kalın gölge */
+.btn-group{width:100%;display:flex;flex-direction:column;align-items:center;gap:14px}
+.btn-share,.btn-download,.btn-download-photo,.btn-buy-physical{
+  font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.15rem;line-height:1;
+  padding:15px 20px 13px;border-radius:16px;cursor:pointer;width:88%;box-sizing:border-box;text-decoration:none;text-align:center;
+  display:flex;justify-content:center;align-items:center;gap:10px;transition:transform .08s,box-shadow .08s}
+.btn-share{background:var(--pink);color:#000;border:0;box-shadow:0 6px 0 var(--pink-deep)}
+.btn-download{background:#fff;color:#000;border:0;box-shadow:0 6px 0 #9b9b9b}
+.btn-download-photo{background:transparent;color:#fff;border:2px solid #fff;font-size:1.05rem;padding:13px 20px 11px}
+.btn-buy-physical{background:transparent;color:var(--pink);border:2px dashed var(--pink);font-size:1.05rem;padding:13px 20px 11px}
+.btn-share:active{transform:translateY(5px);box-shadow:0 1px 0 var(--pink-deep)}
+.btn-download:active{transform:translateY(5px);box-shadow:0 1px 0 #9b9b9b}
+.btn-download-photo:active,.btn-buy-physical:active{transform:scale(.97)}
+.physical-buy-divider{width:60%;height:0;border-top:2px dotted rgba(226,102,163,.5);margin:8px 0 2px}
+.btn-icon{width:21px;height:21px;fill:currentColor;flex-shrink:0}
+.hint{margin-top:20px;font-size:.9rem;color:#b9b9b9;text-align:center;line-height:1.55}
+.hint strong{color:#fff}
 
-/* KVKK */
-.kvkk-box{display:none;flex-direction:column;justify-content:space-between;align-items:center;width:88%;max-width:700px;background:#fff;color:#000;border-radius:28px;padding:28px 30px;box-shadow:10px 10px 0 var(--pink);box-sizing:border-box;text-align:left;gap:16px;animation:popInOption .35s ease-out forwards}
-.kvkk-header{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:clamp(1.5rem,3.2vw,2.1rem);line-height:1;color:#000;text-align:center;margin:0}
-.kvkk-content{font-family:'Nunito',sans-serif;font-size:clamp(.95rem,1.8vw,1.15rem);color:#111;line-height:1.55;background:var(--pink-wash);padding:16px 20px;border-radius:16px;border:2px solid var(--pink)}
-.kvkk-content ul{margin:8px 0 0;padding-left:20px}
-.kvkk-content li{margin-bottom:8px}
-.kvkk-highlight{color:var(--pink-deep);font-weight:800}
-.kvkk-badge{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1.05rem;color:#fff;background:#000;padding:9px 16px 7px;border-radius:999px;text-align:center;width:100%;box-sizing:border-box;line-height:1.3}
+.toast-badge{position:fixed;bottom:25px;left:50%;transform:translateX(-50%) translateY(80px);background:#000;border:2px solid var(--pink);
+  color:#fff;padding:11px 22px;border-radius:999px;font-weight:800;font-size:.95rem;z-index:10000;opacity:0;
+  transition:all .35s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;white-space:nowrap}
+.toast-badge.show{transform:translateX(-50%) translateY(0);opacity:1}
 
-/* Sergi şeridi */
-.marquee-container{display:block;width:100%;overflow:hidden;position:relative;padding:20px 0 26px;background:rgba(255,255,255,.05);border-top:6px solid var(--pink);border-bottom:6px solid var(--pink);margin:15px 0}
-.marquee-track{display:flex;gap:22px;width:max-content;will-change:transform;animation:scrollMarquee 35s linear infinite}
-.marquee-card{height:220px;border-radius:14px;border:4px solid #fff;box-shadow:6px 6px 0 var(--pink);object-fit:cover;flex-shrink:0}
-@keyframes scrollMarquee{0%{transform:translateX(0)}100%{transform:translateX(-33.333%)}}
-
-/* Seçim rehberi: fiziksel tuş renkleri aynen korunur */
-.style-guide{display:flex;flex-direction:row;justify-content:center;flex-wrap:wrap;gap:18px;width:95%;margin:10px 0;z-index:20}
-.style-option{background:#fff;color:#000;padding:8px 20px 8px 10px;border-radius:999px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.2rem;line-height:1;display:flex;align-items:center;gap:12px;box-shadow:5px 5px 0 var(--pink);opacity:0;animation:popInOption .4s cubic-bezier(.175,.885,.32,1.275) forwards}
-@keyframes popInOption{0%{transform:scale(.5) translateY(15px);opacity:0}70%{transform:scale(1.08) translateY(-5px);opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}
-.btn-color{display:inline-flex;align-items:center;justify-content:center;min-width:92px;height:38px;padding:3px 12px 0;border-radius:999px;border:3px solid #000;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1rem;color:#000;line-height:1;box-sizing:border-box;text-align:center}
-.btn-yellow{background:#ffd400}
-.btn-red{background:#ff2d2d;color:#fff}
-.btn-blue{background:#1e90ff;color:#fff}
-
-/* Yükleme */
-.slot-machine-box{width:100px;height:100px;border:5px solid #fff;border-radius:22px;box-shadow:7px 7px 0 var(--pink);background:#000;overflow:hidden;margin-bottom:20px;position:relative;display:flex;justify-content:center;z-index:15;box-sizing:content-box}
-.slot-track{display:flex;flex-direction:column;align-items:center;position:absolute;top:0;left:0;width:100%;animation:spinSlot .3s linear infinite}
-.slot-item{width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.slot-item img{width:75px;height:75px;object-fit:contain;filter:invert(1) drop-shadow(0 0 8px var(--pink))}
-@keyframes spinSlot{0%{transform:translateY(0)}100%{transform:translateY(-400px)}}
-.slot-track.stopped{animation:none;transition:transform .8s cubic-bezier(.15,.85,.35,1.2)}
-.loading-bar-container{width:70%;height:36px;border:4px solid #fff;border-radius:999px;padding:4px;background:#000;margin-bottom:22px;box-sizing:border-box}
-.loading-bar{height:100%;width:0%;background:repeating-linear-gradient(90deg,var(--pink) 0 16px,var(--pink-deep) 16px 19px);border-radius:999px;transition:width .5s ease}
-#dynamic-text{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:clamp(1.5rem,3.4vw,2.3rem);line-height:1.15;color:#000;background:#fff;padding:14px 28px 10px;border-radius:20px;box-shadow:7px 7px 0 var(--pink);max-width:80%}
-.style-badge{padding:10px 28px 6px;background:var(--pink);color:#000;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.5rem;line-height:1.1;border-radius:999px;margin-bottom:2vh}
-
-/* Sonuç */
-.result-layout{display:flex;flex-direction:column;align-items:center;flex-grow:1;justify-content:space-evenly;width:100%;padding:1vh 0}
-#result-image{max-height:50vh;width:auto;border-radius:18px;opacity:0;transform:scale(.8);transition:all .7s cubic-bezier(.175,.885,.32,1.275)}
-#result-image.loaded{opacity:1;transform:scale(1)}
-#result-image.rarity-common{border:5px solid #fff;box-shadow:8px 8px 0 rgba(255,255,255,.25)}
-#result-image.rarity-uncommon{border:5px solid var(--pink-soft);box-shadow:8px 8px 0 var(--pink-soft);animation:pulseUncommon 2s infinite alternate}
-@keyframes pulseUncommon{0%{box-shadow:8px 8px 0 var(--pink-soft)}100%{box-shadow:8px 8px 0 var(--pink-soft),0 0 34px var(--pink-soft)}}
-#result-image.rarity-rare{border:5px solid var(--pink);box-shadow:8px 8px 0 var(--pink);animation:pulseRare 1.5s infinite alternate}
-@keyframes pulseRare{0%{box-shadow:8px 8px 0 var(--pink),0 0 20px var(--pink);transform:scale(1)}100%{box-shadow:8px 8px 0 var(--pink),0 0 55px var(--pink);transform:scale(1.02)}}
-#result-image.rarity-promo{border:5px solid #fff;box-shadow:8px 8px 0 var(--pink);animation:promoGlow 1s infinite alternate}
-@keyframes promoGlow{0%{box-shadow:8px 8px 0 var(--pink),0 0 30px #fff;transform:scale(1)}100%{box-shadow:8px 8px 0 var(--pink),0 0 70px #fff,0 0 90px var(--pink);transform:scale(1.03)}}
-
-.qr-card{background:#fff;color:#000;padding:16px 24px;border-radius:26px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:22px;width:88%;max-width:580px;box-shadow:8px 8px 0 var(--pink)}
-#qrcode-box{width:145px;height:145px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fff;border:4px solid #000;box-sizing:border-box;flex-shrink:0;overflow:hidden;padding:6px}
-#qrcode-box img,#qrcode-box canvas{width:100%!important;height:100%!important;object-fit:contain;background:#fff;display:block;image-rendering:pixelated}
-.qr-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1rem;color:#000;animation:pulseText .8s infinite alternate;text-align:center;box-sizing:border-box;padding:6px}
-@keyframes pulseText{0%{opacity:.4;transform:scale(.95)}100%{opacity:1;transform:scale(1.05)}}
-.qr-text{text-align:left;display:flex;flex-direction:column;justify-content:center}
-.qr-text h3{margin:0 0 6px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:#000;letter-spacing:-.5px}
-.qr-text p{margin:0;font-family:'Nunito',sans-serif;font-weight:800;font-size:1.05rem;color:#222;line-height:1.35}
-
-/* Sistem katmanları */
-#flash-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:#fff;opacity:0;pointer-events:none;z-index:9999;transition:opacity .1s ease-out}
-#maintenance-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:99999;text-align:center;font-family:'Baloo 2',sans-serif}
-.error-title{color:var(--pink);font-weight:800;font-size:clamp(3rem,8vw,6rem);margin:0 0 24px;line-height:1;text-shadow:0 6px 0 #fff;animation:pulseError 1s infinite alternate}
-.error-sub{color:#fff;font-weight:700;font-size:clamp(1.2rem,2.8vw,1.8rem);line-height:1.5}
-.error-sub span{color:var(--pink)}
-@keyframes pulseError{0%{opacity:.6;transform:scale(.98)}100%{opacity:1;transform:scale(1)}}
-
-.hold-ui-container{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:5px}
-.hold-text{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1.1rem;color:#fff;margin-bottom:8px;animation:blink 1s step-end infinite}
-.hold-bar-bg{width:50%;max-width:300px;height:18px;border:3px solid #fff;border-radius:999px;padding:2px;background:#000;box-sizing:border-box}
-.hold-bar-fill{height:100%;width:0%;background:var(--pink);border-radius:999px;transition:none}
-.hold-bar-fill.animating{transition:width 3s linear;width:100%}
-
-/* 3D inceleme */
-#showcase-container{position:fixed;top:0;left:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;pointer-events:none;z-index:99999;background:rgba(0,0,0,0);transition:background .2s ease-out}
-#showcase-container.active{background:rgba(0,0,0,.86);pointer-events:auto}
-#showcase-container.fast-fade{transition:background .15s ease-out!important;background:rgba(0,0,0,0)!important}
-.showcase-card-wrapper{position:relative;height:65vh;aspect-ratio:768/1280;transform:scale(.35);opacity:0;transition:transform .6s cubic-bezier(.16,1,.3,1),opacity .3s ease;perspective:1000px}
-#showcase-card{width:100%;height:100%;border-radius:18px;border:5px solid #fff;box-shadow:12px 12px 0 var(--pink),0 0 70px rgba(226,102,163,.6);object-fit:contain;background:#000;transform-style:preserve-3d}
-.showcase-holo-glare{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:18px;pointer-events:none;
-  background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,.05) 25%,rgba(226,102,163,.45) 48%,rgba(255,255,255,.4) 52%,rgba(255,255,255,.05) 75%,transparent 100%);
-  background-size:250% 250%;mix-blend-mode:color-dodge;opacity:0;transition:opacity .5s ease}
-.showcase-card-wrapper.pop-in{transform:scale(1);opacity:1}
-.showcase-card-wrapper.inspecting #showcase-card{animation:float3D 4.5s ease-in-out infinite alternate}
-.showcase-card-wrapper.inspecting .showcase-holo-glare{opacity:1;animation:holoFlow 3.5s ease-in-out infinite alternate}
-@keyframes float3D{0%{transform:rotateX(7deg) rotateY(-9deg) translateZ(20px)}50%{transform:rotateX(-5deg) rotateY(10deg) translateZ(35px)}100%{transform:rotateX(8deg) rotateY(-5deg) translateZ(15px)}}
-@keyframes holoFlow{0%{background-position:0 0}100%{background-position:100% 100%}}
-.showcase-card-wrapper.pop-out{transform:scale(.35);opacity:0;transition:transform .4s cubic-bezier(.7,0,.84,0),opacity .3s ease!important}
-
-/* Tanıtım videosu */
-#promo-video-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;z-index:999998;display:none;justify-content:center;align-items:center;opacity:0;transition:opacity .4s ease}
-#promo-video-overlay.active{display:flex;opacity:1}
-#promo-video{width:100%;height:100%;object-fit:cover}
-.promo-badge{position:absolute;bottom:3vh;padding:12px 28px 8px;background:var(--pink);color:#000;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.5rem;line-height:1.1;border-radius:999px;pointer-events:none}
+/* Kutum penceresi */
+.modal-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.82);display:none;justify-content:center;align-items:center;z-index:9999;backdrop-filter:blur(4px);opacity:0;transition:opacity .3s ease}
+.modal-overlay.active{display:flex;opacity:1}
+.modal-content{background:#fff;color:#000;border-radius:24px;padding:30px 20px;width:85%;max-width:400px;text-align:center;box-shadow:9px 9px 0 var(--pink);display:flex;flex-direction:column;gap:14px;position:relative}
+.modal-content h2{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.9rem;color:#000;margin:0;line-height:1;letter-spacing:-.5px}
+.modal-content p{color:#333;font-size:.95rem;line-height:1.5;margin:0}
+.vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:14px;max-height:50vh;overflow-y:auto;padding:12px 6px 6px;margin-top:6px;border-top:2px dotted var(--pink)}
+.vault-item{border:3px solid #000;border-radius:12px;overflow:hidden;cursor:pointer;position:relative;background:#000;transition:transform .2s,border-color .2s}
+.vault-item:hover{transform:scale(1.05);border-color:var(--pink);z-index:2}
+.vault-item img{width:100%;aspect-ratio:9/16;object-fit:cover;display:block}
+.empty-vault{text-align:center;color:#777;font-size:.95rem;grid-column:1/-1;padding:20px 0}
+.vault-close-icon{position:absolute;top:-14px;right:-14px;background:#000;color:#fff;border:3px solid #fff;border-radius:50%;width:38px;height:38px;font-size:1.3rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 0 3px}
+.vault-warning-box{background:var(--pink-wash);border:2px dashed var(--pink);color:#000;font-size:.85rem;padding:12px;border-radius:14px;line-height:1.45;display:flex;flex-direction:column;gap:10px;align-items:center}
+.btn-inline-google{background:#000;color:#fff;font-family:'Baloo 2',sans-serif;font-weight:700;font-size:.95rem;padding:9px 18px 7px;border-radius:999px;border:0;cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform .1s}
+.btn-inline-google:active{transform:scale(.95)}
+.btn-inline-google img{width:16px;height:16px;background:#fff;border-radius:50%;padding:2px;margin-top:-2px}
+@media (prefers-reduced-motion:reduce){.bg-anim{animation:none}.loading-text{animation:none}}
 
 </style>
 </head>
 <body>
-    <div class="drip-bar"></div>
-    <div id="flash-overlay"></div>
-    <div id="maintenance-overlay">
-        <h1 class="error-title">BAKIMDA</h1>
-        <p class="error-sub">WAFFLE FIRINI GEÇİCİ OLARAK BAKIMDADIR.<br><span style="color: var(--waffle-gold);">LÜTFEN JETON ATMAYINIZ.</span></p>
-    </div>
 
-    <!-- 🎬 Tanıtım Videosu Katmanı -->
-    <div id="promo-video-overlay">
-        <video id="promo-video" playsinline preload="auto"></video>
-        <div class="promo-badge">BAŞLAMAK İÇİN PARA ATIN</div>
-    </div>
+    <div class="bg-anim"></div>
 
-    <!-- 3D İnceleme Kabı -->
-    <div id="showcase-container">
-        <div class="showcase-card-wrapper" id="showcase-card-wrapper">
-            <img id="showcase-card" src="">
-            <div class="showcase-holo-glare"></div>
-        </div>
-    </div>
+    <header class="brand-bar"><span class="brand-word">waffology</span><button id="open-vault-btn" class="btn-open-vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>Kutum</button></header>
+    <div id="toast-badge" class="toast-badge">Koleksiyonuna eklendi</div>
 
-    <div id="idle-screen" class="screen active">
-        <h1 class="title-arcade">WAFFOLOGY</h1>
+    <div class="container">
+        <h1 class="title-arcade">Afiyet<br>olsun!</h1>
+        <div class="subtitle">Kartı incelemek için üzerinde parmağını sürükle</div>
 
-        <!-- 🛡️ KVKK AYDINLATMA VE AÇIK RIZA KUTUSU -->
-        <div class="kvkk-box" id="kvkk-box">
-            <h2 class="kvkk-header">KVKK VE GİZLİLİK BİLDİRİMİ</h2>
-            <div class="kvkk-content">
-                <strong>6698 Sayılı Kişisel Verilerin Korunması Kanunu (KVKK) Kapsamında Bilgilendirme:</strong>
-                <ul>
-                    <li>Kamera ile çekilen gerçek fotoğrafınız <span class="kvkk-highlight">KESİNLİKLE KAYDEDİLMEZ VE DEPOLANMAZ.</span></li>
-                    <li>Görüntünüz yalnızca yapay zeka ile anlık fantastik oyun kartı çizimi üretmek amacıyla geçici bellekte işlenir ve <span class="kvkk-highlight">saniyeler içinde otomatik olarak kalıcı biçimde silinir.</span></li>
-                    <li>Hiçbir biyometrik veriniz veya kimlik bilginiz arşivlenmez, üçüncü kişilerle paylaşılmaz.</li>
-                </ul>
-            </div>
-            <div class="kvkk-badge">
-                SIFIR VERİ SAKLAMA GARANTİSİ (ZERO DATA RETENTION)
+        <div class="card-3d-wrapper" id="card-wrapper">
+            <div class="image-frame" id="image-frame">
+                <div class="loading-text" id="loading-indicator">FIRINDAN ÇIKIYOR...</div>
+                <img id="bg-image" src="" alt="Arka Plan">
+                <img id="cutout-image" src="" alt="3D Karakter">
+                <img id="overlay-image" src="" alt="Arayüz Katmanı">
+                <div class="holo-glare" id="holo-glare"></div>
             </div>
         </div>
 
-        <div class="mirror-container" id="mirror-box">
-            <video id="live-stream" autoplay muted playsinline></video>
-            <div class="focus-box"></div>
-            <div id="countdown-display">3</div>
+        <div class="btn-group" id="action-buttons-group">
+            <button id="share-btn" class="btn-share">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                Kartını paylaş
+            </button>
+
+            <a id="download-btn" class="btn-download" href="#" target="_blank">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Kartını indir
+            </a>
+
+            <a id="download-photo-btn" class="btn-download-photo" href="#" target="_blank">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Sadece fotoğrafı indir
+            </a>
+
+            <div class="physical-buy-divider" id="buy-divider"></div>
+            <a id="buy-physical-btn" class="btn-buy-physical" href="#" target="_blank">
+                Fiziksel kartı satın al
+            </a>
         </div>
 
-        <div class="marquee-container" id="attract-marquee">
-            <div class="marquee-track" id="marquee-track"></div>
-        </div>
-        
-        <div id="selection-guide" class="style-guide">
-            <div class="style-option" style="animation-delay: 0.0s"><span class="btn-color btn-yellow">SARI</span> WAFFLE CANAVARI</div>
-            <div class="style-option" style="animation-delay: 0.1s"><span class="btn-color btn-red">KIRMIZI</span> POPSTAR</div>
-            <div class="style-option" style="animation-delay: 0.2s"><span class="btn-color btn-blue">MAVİ</span> KNIGHT</div>
-        </div>
-        
-        <div id="credit-display" class="credit-display">KREDİ: 0</div>
-        
-        <p class="insert-coin" id="insert-coin-text" style="margin-top: 5px;">PARA ATIN VE BAŞLAYIN</p>
+        <p class="hint">İndirme butonları çalışmazsa,<br>görselin üzerine basılı tutarak<br><strong>"Fotoğraflara Kaydet"</strong> diyebilirsin.</p>
     </div>
 
-    <div id="processing-screen" class="screen">
-        <div id="selected-style-display" class="style-badge">STİL: BEKLENİYOR...</div>
-        
-        <div class="slot-machine-box">
-            <div class="slot-track" id="slot-track">
-                <div class="slot-item"><img src="/static/templates/symbol_common.png"></div>
-                <div class="slot-item"><img src="/static/templates/symbol_uncommon.png"></div>
-                <div class="slot-item"><img src="/static/templates/symbol_rare.png"></div>
-                <div class="slot-item"><img src="/static/templates/symbol_promo.png"></div>
-                <div class="slot-item"><img src="/static/templates/symbol_common.png"></div>
+    <div id="vault-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px; padding: 25px 15px;">
+            <button id="close-vault-modal" class="vault-close-icon">×</button>
+            <h2>Waffology kutun</h2>
+            <p style="font-size: 0.8rem; color: #444;">Geçmişte çıkardığın tüm Waffology kartların burada saklanır. İncelemek için birine tıkla!</p>
+            
+            <div id="vault-auth-warning" class="vault-warning-box" style="display:none;">
+                <span>Tarayıcı geçmişini silersen kartların kaybolabilir! Hesabına giriş yaptığında tüm kartların <strong>otomatik olarak</strong> kalıcı koleksiyonuna eklenir:</span>
+                <button id="inline-google-login-btn" class="btn-inline-google">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
+                    Google ile Giriş Yap & Kaydet
+                </button>
             </div>
-        </div>
 
-        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-            <div class="loading-bar-container"><div class="loading-bar" id="progress-bar"></div></div>
-            <div id="dynamic-text">WAFFLE HAMURU HAZIRLANIYOR...</div>
-        </div>
-    </div>
-
-    <div id="showing-screen" class="screen">
-        <h2 class="title-arcade title-small">AFİYET OLSUN!</h2>
-        <div class="result-layout">
-            <img id="result-image" src="" alt="Waffology Sonuç">
-            <div class="qr-card">
-                <div id="qrcode-box">
-                    <div id="qr-loading" class="qr-placeholder">HAZIRLANIYOR</div>
-                </div>
-                <div class="qr-text">
-                    <h3>KARTIN HAZIR!</h3>
-                    <p>TELEFON KAMERANLA KODU OKUTARAK KARTINI VE 3D KATMANLARINI İNDİR.</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="hold-ui-container">
-            <div class="hold-text">ANA MENÜ İÇİN HERHANGİ BİR TUŞA BASILI TUT</div>
-            <div class="hold-bar-bg">
-                <div class="hold-bar-fill" id="hold-bar"></div>
-            </div>
+            <div id="vault-grid" class="vault-grid"></div>
         </div>
     </div>
 
     <script>
-        const PROMO_VIDEOS = [
-            "/static/videos/promo.mp4"
-        ];
-        const ATTRACT_SHOWCASE_DURATION = 60000; // 60 Saniye
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEKNu16K9zEZey-5QeltIRTSjbc30U6e8",
+            authDomain: "arcadekiosk.firebaseapp.com",
+            projectId: "arcadekiosk",
+            storageBucket: "arcadekiosk.firebasestorage.app",
+            messagingSenderId: "348756245755",
+            appId: "1:348756245755:web:f4b8c0be51e26d3528c45e"
+        };
 
-        let activeVideoStream = null;
-        let selectionState = 0; 
-        let chosenTheme = "";
-        let chosenStyle = "";
-        let lastKeyPressTime = 0;
-        let attractTextInterval = null, attractShowcaseInterval = null;
-        let promoVideoTimer = null;
-        let isPromoVideoPlaying = false;
-        let currentPromoIdx = 0;
-        let lastKnownCardListJSON = "";
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-        const THEME_MAP = { '1': 'waffle_canavari', '2': 'popstar', '3': 'knight' };
-        const THEME_DISPLAY_NAMES = { 'waffle_canavari': 'WAFFLE CANAVARI', 'popstar': 'POPSTAR', 'knight': 'KNIGHT' };
+        const urlParams = new URLSearchParams(window.location.search);
+        let imageUrl = "", bgUrl = "", cutoutUrl = "", overlayUrl = "";
 
-        const STYLE_MAP = { '1': 'webtoon', '2': 'cinema', '3': 'fantasy' };
-        const STYLE_DISPLAY_NAMES = { 'webtoon': 'WEBTOON', 'cinema': 'CINEMA', 'fantasy': 'FANTASY' };
-
-        function startCamera() {
-            if (activeVideoStream) return;
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-            .then(function(stream) { 
-                activeVideoStream = stream;
-                document.getElementById('live-stream').srcObject = stream; 
-            })
-            .catch(function(err) { console.log("Kamera hatası: ", err); });
+        function getParam(name) {
+            const regex = new RegExp('[?&]' + name + '=([^&]+)');
+            const match = window.location.href.match(regex);
+            if (!match) return "";
+            try { return decodeURIComponent(match[1]); } catch (e) { return match[1]; }
         }
 
-        function stopCamera() {
-            if (activeVideoStream) {
-                activeVideoStream.getTracks().forEach(track => track.stop());
-                activeVideoStream = null;
-                document.getElementById('live-stream').srcObject = null;
-            }
+        const shortCardId = getParam('id') || urlParams.get('id');
+        imageUrl = getParam('c') || urlParams.get('url') || urlParams.get('c');      
+        bgUrl = getParam('b') || urlParams.get('photo') || urlParams.get('b'); 
+        cutoutUrl = getParam('t') || urlParams.get('cutout') || urlParams.get('t'); 
+        overlayUrl = getParam('o') || urlParams.get('overlay') || urlParams.get('o'); 
+
+        const compressedData = urlParams.get('d');
+        if (!imageUrl && compressedData) {
+            try {
+                let base64 = compressedData.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) { base64 += '='; }
+                const jsonStr = decodeURIComponent(escape(atob(base64)));
+                const payload = JSON.parse(jsonStr);
+
+                imageUrl = payload.c || imageUrl;
+                bgUrl = payload.b || bgUrl;
+                cutoutUrl = payload.t || cutoutUrl;
+                overlayUrl = payload.o || overlayUrl;
+            } catch (e) { console.error("Base64 Veri Çözme Hatası:", e); }
         }
 
-        const socket = io();
-        const idleScreen = document.getElementById('idle-screen'), processingScreen = document.getElementById('processing-screen'), showingScreen = document.getElementById('showing-screen');
-        const resultImage = document.getElementById('result-image'), dynamicText = document.getElementById('dynamic-text'), styleDisplay = document.getElementById('selected-style-display'), flashOverlay = document.getElementById('flash-overlay'), progressBar = document.getElementById('progress-bar'), countdownDisplay = document.getElementById('countdown-display'), insertCoinText = document.getElementById('insert-coin-text');
-        const creditDisplay = document.getElementById('credit-display');
-        const maintenanceOverlay = document.getElementById('maintenance-overlay');
-        const qrcodeBox = document.getElementById('qrcode-box');
-        const holdBar = document.getElementById('hold-bar');
-        const mirrorBox = document.getElementById('mirror-box');
-        const kvkkBox = document.getElementById('kvkk-box');
-        const attractMarquee = document.getElementById('attract-marquee');
-        const marqueeTrack = document.getElementById('marquee-track');
-        const slotTrack = document.getElementById('slot-track');
-        const selectionGuide = document.getElementById('selection-guide');
+        const bgElement = document.getElementById('bg-image');
+        const cutoutElement = document.getElementById('cutout-image'); 
+        const overlayElement = document.getElementById('overlay-image'); 
         
-        const showcaseContainer = document.getElementById('showcase-container');
-        const showcaseWrapper = document.getElementById('showcase-card-wrapper');
-        const showcaseCard = document.getElementById('showcase-card');
+        const shareBtn = document.getElementById('share-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const downloadPhotoBtn = document.getElementById('download-photo-btn');
+        const buyPhysicalBtn = document.getElementById('buy-physical-btn'); 
+        const buyDivider = document.getElementById('buy-divider');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const toastBadge = document.getElementById('toast-badge');
 
-        const promoVideoOverlay = document.getElementById('promo-video-overlay');
-        const promoVideo = document.getElementById('promo-video');
-        
-        const sfxBeep = new Audio('/static/sounds/beep.mp3'), sfxShutter = new Audio('/static/sounds/shutter.mp3'), sfxCoin = new Audio('/static/sounds/coin.mp3'), sfxSuccess = new Audio('/static/sounds/success.mp3'), sfxIdle = new Audio('/static/sounds/idle_loop.mp3'), sfxPopUp = new Audio('/static/sounds/popup.mp3'), sfxPopOut = new Audio('/static/sounds/popout.mp3');
-        sfxIdle.loop = true; sfxIdle.volume = 0.2;
+        const SHOPIER_URL = "https://www.shopier.com/paradokskiosk/49269215";
 
-        const loadingMessages = ["ÇİKOLATA SOSU DÖKÜLÜYOR...", "HAMUR ÇITIRDATILIYOR...", "TATLI KRİZİ HESAPLANIYOR...", "NADİRLİK ATANIYOR...", "KART FIRINDAN ÇIKIYOR...", "EFSANE LEZZET İŞLENİYOR..."];
-        let messageInterval, progressInterval;
+        const inlineGoogleLoginBtn = document.getElementById('inline-google-login-btn');
+        const openVaultBtn = document.getElementById('open-vault-btn');
+        const vaultModal = document.getElementById('vault-modal');
+        const closeVaultModalBtn = document.getElementById('close-vault-modal');
+        const vaultGrid = document.getElementById('vault-grid');
+        const vaultAuthWarning = document.getElementById('vault-auth-warning');
 
-        function playPopUpSound() {
-            if (typeof sfxPopUp !== 'undefined') {
-                sfxPopUp.currentTime = 0;
-                sfxPopUp.play().catch(e => {});
+        function showToast(msg) {
+            toastBadge.innerText = msg;
+            toastBadge.classList.add('show');
+            setTimeout(() => { toastBadge.classList.remove('show'); }, 3000);
+        }
+
+        function updateDisplayCard(c_img, c_bg, c_cut, c_over) {
+            imageUrl = c_img; bgUrl = c_bg; cutoutUrl = c_cut; overlayUrl = c_over;
+            
+            loadingIndicator.style.display = 'block';
+            bgElement.style.opacity = '0';
+            if (cutoutElement) cutoutElement.style.opacity = '0';
+            if (overlayElement) overlayElement.style.opacity = '0';
+
+            if (bgUrl || imageUrl) {
+                bgElement.src = bgUrl || imageUrl;
+                bgElement.onload = () => { 
+                    bgElement.style.opacity = '1'; 
+                    if (!overlayUrl || overlayUrl === "null" || overlayUrl === "undefined") {
+                        loadingIndicator.style.display = 'none';
+                    }
+                };
+            }
+
+            if (cutoutUrl && cutoutUrl !== "null" && cutoutUrl !== "undefined") {
+                cutoutElement.src = cutoutUrl;
+                cutoutElement.onload = () => { cutoutElement.style.opacity = '1'; };
+            } else {
+                cutoutElement.removeAttribute('src');
+            }
+
+            if (overlayUrl && overlayUrl !== "null" && overlayUrl !== "undefined") {
+                overlayElement.src = overlayUrl;
+                overlayElement.onload = () => { 
+                    overlayElement.style.opacity = '1'; 
+                    overlayElement.style.zIndex = '100';
+                    loadingIndicator.style.display = 'none';
+                };
+            } else {
+                overlayElement.removeAttribute('src');
+                loadingIndicator.style.display = 'none';
             }
         }
 
-        function playPopOutSound() {
-            if (typeof sfxPopOut !== 'undefined') {
-                sfxPopOut.currentTime = 0;
-                sfxPopOut.play().catch(e => {});
+        function saveCardLocally() {
+            if (!imageUrl) return;
+            const cardData = {
+                id: Date.now().toString(),
+                imageUrl: imageUrl,
+                bgUrl: bgUrl || "",
+                cutoutUrl: cutoutUrl || "",
+                overlayUrl: overlayUrl || "",
+                date: new Date().toISOString()
+            };
+            
+            let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+            if (!vault.some(card => card.imageUrl === imageUrl)) {
+                vault.push(cardData);
+                localStorage.setItem('paradoks_vault', JSON.stringify(vault));
             }
         }
 
-        function populateMarqueeCards(cardArray) {
-            if (!marqueeTrack || !cardArray || cardArray.length === 0) return;
-            const currentJSON = JSON.stringify(cardArray);
-            if (currentJSON === lastKnownCardListJSON) return;
-            lastKnownCardListJSON = currentJSON;
+        async function syncCardsToFirestore(user) {
+            if (!user) return;
+            try {
+                await db.collection("users").doc(user.uid).set({
+                    name: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
 
-            let htmlContent = "";
-            const tripleCards = [...cardArray, ...cardArray, ...cardArray];
-            const cacheBuster = Date.now();
-            tripleCards.forEach(cardUrl => { 
-                htmlContent += `<img src="${cardUrl}?v=${cacheBuster}" class="marquee-card">`; 
+                saveCardLocally();
+                let localVault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+
+                for (const card of localVault) {
+                    if (!card.imageUrl) continue;
+                    const cardDocId = btoa(card.imageUrl).replace(/[^a-zA-Z0-9]/g, "").slice(-30);
+                    await db.collection("users").doc(user.uid).collection("vault").doc(cardDocId).set({
+                        imageUrl: card.imageUrl,
+                        bgUrl: card.bgUrl || "",
+                        cutoutUrl: card.cutoutUrl || "",
+                        overlayUrl: card.overlayUrl || "",
+                        createdAt: card.date || new Date().toISOString()
+                    }, { merge: true });
+                }
+            } catch (e) { console.error("Firestore Otomatik Kayıt Hatası:", e); }
+        }
+
+        async function triggerGoogleLogin() {
+            try {
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    await auth.signInWithRedirect(googleProvider);
+                } else {
+                    const result = await auth.signInWithPopup(googleProvider);
+                    await syncCardsToFirestore(result.user);
+                    showToast("Hesabına bağlandı, kartların koleksiyonuna eklendi");
+                    if (vaultModal.classList.contains('active')) {
+                        loadVaultContents(result.user);
+                    }
+                }
+            } catch (error) { console.error("Giriş Hatası:", error); }
+        }
+
+        inlineGoogleLoginBtn.addEventListener('click', triggerGoogleLogin);
+
+        auth.onAuthStateChanged(async (user) => {
+            saveCardLocally();
+            if (user) {
+                vaultAuthWarning.style.display = 'none';
+                await syncCardsToFirestore(user);
+                if (imageUrl) showToast("Kartın koleksiyonuna otomatik eklendi");
+            } else {
+                vaultAuthWarning.style.display = 'flex';
+            }
+        });
+
+        async function loadVaultContents(user) {
+            vaultGrid.innerHTML = "<p class='empty-vault'>Koleksiyon Yükleniyor...</p>";
+            if (user) {
+                vaultAuthWarning.style.display = 'none';
+                try {
+                    const snapshot = await db.collection("users").doc(user.uid).collection("vault").orderBy("createdAt", "desc").get();
+                    if (snapshot.empty) {
+                        vaultGrid.innerHTML = "<p class='empty-vault'>Kutun henüz boş!</p>";
+                        return;
+                    }
+                    vaultGrid.innerHTML = "";
+                    snapshot.forEach(doc => renderVaultItem(doc.data()));
+                } catch (error) { renderLocalVault(); }
+            } else {
+                vaultAuthWarning.style.display = 'flex';
+                renderLocalVault();
+            }
+        }
+
+        openVaultBtn.addEventListener('click', () => {
+            vaultModal.classList.add('active');
+            loadVaultContents(auth.currentUser);
+        });
+
+        function renderLocalVault() {
+            let vault = JSON.parse(localStorage.getItem('paradoks_vault')) || [];
+            if (vault.length === 0) {
+                vaultGrid.innerHTML = "<p class='empty-vault'>Henüz kart yok!</p>";
+                return;
+            }
+            vaultGrid.innerHTML = "";
+            vault.slice().reverse().forEach(card => renderVaultItem(card));
+        }
+
+        function renderVaultItem(card) {
+            const item = document.createElement('div');
+            item.className = 'vault-item';
+            item.innerHTML = `<img src="${card.imageUrl}" alt="Waffology Kartı">`;
+            item.addEventListener('click', () => {
+                updateDisplayCard(card.imageUrl, card.bgUrl, card.cutoutUrl, card.overlayUrl);
+                vaultModal.classList.remove('active');
             });
-            marqueeTrack.innerHTML = htmlContent;
+            vaultGrid.appendChild(item);
         }
 
-        function refreshCardsFromRecords() {
-            if (selectionState !== 0 || isPromoVideoPlaying) return;
-            fetch('/api/cards')
-                .then(res => res.ok ? res.json() : null)
-                .then(data => {
-                    if (data && data.cards && data.cards.length > 0) {
-                        populateMarqueeCards(data.cards);
+        closeVaultModalBtn.addEventListener('click', () => vaultModal.classList.remove('active'));
+
+        shareBtn.addEventListener('click', async () => {
+            const shareData = {
+                title: 'Waffology RPG Kartım!',
+                text: 'Waffology Kiosk\'ta çıkardığım 3D karakter kartıma göz at! 🧇✨',
+                url: window.location.href
+            };
+
+            if (navigator.share) {
+                try { await navigator.share(shareData); } catch (err) {}
+            } else {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    showToast("Kart linki kopyalandı");
+                } catch (err) {
+                    prompt("Kart linkini kopyala:", window.location.href);
+                }
+            }
+        });
+
+        function initCardActions() {
+            saveCardLocally();
+            updateDisplayCard(imageUrl, bgUrl, cutoutUrl, overlayUrl);
+            if (auth.currentUser) syncCardsToFirestore(auth.currentUser);
+
+            shareBtn.style.display = "flex";
+            downloadBtn.style.display = "flex";
+            downloadPhotoBtn.style.display = "flex";
+            buyPhysicalBtn.style.display = "flex";
+            buyDivider.style.display = "block";
+
+            buyPhysicalBtn.onclick = function(e) {
+                e.preventDefault();
+                alert("Shopier güvenli ödeme sayfasına yönlendiriliyorsunuz.\n\nSiparişinizin doğru basılabilmesi için lütfen Sipariş Notu kısmına resimdeki #WAFF ile başlayan kart kodunuzu yazmayı unutmayın!");
+                window.open(`${SHOPIER_URL}?image_url=${encodeURIComponent(imageUrl)}`, '_blank');
+            };
+            downloadBtn.onclick = function(e) {
+                e.preventDefault(); 
+                window.open(imageUrl, '_blank');
+            };
+            downloadPhotoBtn.onclick = function(e) {
+                e.preventDefault();
+                window.open(bgUrl ? bgUrl : imageUrl, '_blank');
+            };
+        }
+
+        function showNotFound() {
+            loadingIndicator.innerText = "KART BULUNAMADI";
+            loadingIndicator.style.color = "var(--waffle-berry)";
+            shareBtn.style.display = "none";
+            downloadBtn.style.display = "none";
+            downloadPhotoBtn.style.display = "none";
+            buyPhysicalBtn.style.display = "none";
+            buyDivider.style.display = "none";
+        }
+
+        // 🚀 BAŞLATMA: Kısa ID (?id=WAFF-XXXX) Varsa Firestore'dan Çek, Yoksa Doğrudan URL'den Aç
+        if (shortCardId) {
+            loadingIndicator.innerText = "FIRINDAN ÇIKIYOR...";
+            db.collection("kiosk_cards").doc(shortCardId.replace("#", "").trim()).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        imageUrl = data.c || "";
+                        bgUrl = data.b || "";
+                        cutoutUrl = data.t || "";
+                        overlayUrl = data.o || "";
+                        initCardActions();
+                    } else {
+                        showNotFound();
                     }
                 })
-                .catch(() => {});
-        }
-
-        setInterval(refreshCardsFromRecords, 25000);
-
-        function startAttractMode() {
-            if (isPromoVideoPlaying || promoVideoTimer) return;
-
-            stopAttractIntervalsOnly();
-            console.log("🎡 Attract Mode Aktif. 60 saniyelik geri sayım başladı...");
-
-            let textIndex = 0;
-            const attractTexts = [
-                { t: "TATLI KRİZİN KAÇ PUAN?", c: "var(--waffle-gold)" },
-                { t: "ÇİKOLATA AURAN YETER Mİ?", c: "var(--waffle-berry)" },
-                { t: "WAFFOLOGY EFSANESİ OL!", c: "var(--waffle-cream)" },
-                { t: "KENDİ KARAKTERİNİ YARAT!", c: "#ffffff" },
-                { t: "PARA ATIN VE BAŞLAYIN", c: "var(--waffle-gold)" }
-            ];
-            
-            insertCoinText.innerText = attractTexts[0].t;
-            insertCoinText.style.color = attractTexts[0].c;
-
-            attractTextInterval = setInterval(() => {
-                if(selectionState !== 0 || isPromoVideoPlaying) return;
-                textIndex = (textIndex + 1) % attractTexts.length;
-                insertCoinText.style.opacity = 0;
-                
-                setTimeout(() => {
-                    insertCoinText.innerText = attractTexts[textIndex].t;
-                    insertCoinText.style.color = attractTexts[textIndex].c;
-                    insertCoinText.style.opacity = 1;
-                }, 300);
-            }, 3000);
-
-            attractShowcaseInterval = setInterval(() => {
-                if(selectionState !== 0 || isPromoVideoPlaying) return;
-                
-                const activeCardImgs = document.querySelectorAll('.marquee-card');
-                if(!activeCardImgs || activeCardImgs.length === 0) return;
-                
-                const randomImg = activeCardImgs[Math.floor(Math.random() * activeCardImgs.length)];
-                if(!randomImg || !randomImg.src) return;
-
-                showcaseCard.src = randomImg.src;
-                
-                showcaseContainer.classList.remove('fast-fade');
-                showcaseContainer.classList.add('active');
-                
-                showcaseWrapper.classList.remove('pop-out', 'inspecting');
-                showcaseWrapper.classList.add('pop-in');
-                
-                playPopUpSound();
-
-                setTimeout(() => {
-                    if(selectionState !== 0 || isPromoVideoPlaying) return;
-                    showcaseWrapper.classList.add('inspecting');
-                }, 600);
-
-                setTimeout(() => {
-                    showcaseWrapper.classList.remove('inspecting', 'pop-in');
-                    showcaseWrapper.classList.add('pop-out');
-                    playPopOutSound();
-
-                    setTimeout(() => {
-                        showcaseContainer.classList.add('fast-fade');
-                        setTimeout(() => {
-                            showcaseContainer.classList.remove('active', 'fast-fade');
-                        }, 150);
-                    }, 350); 
-
-                }, 5500); 
-
-            }, 15000);
-
-            promoVideoTimer = setTimeout(() => {
-                promoVideoTimer = null;
-                if (selectionState === 0) {
-                    playPromoVideo();
-                }
-            }, ATTRACT_SHOWCASE_DURATION);
-        }
-
-        function playPromoVideo() {
-            if (selectionState !== 0 || !PROMO_VIDEOS || PROMO_VIDEOS.length === 0) return;
-            isPromoVideoPlaying = true;
-            console.log("🎬 60 saniye doldu! Tanıtım videosu tetikleniyor...");
-
-            stopAttractIntervalsOnly();
-            showcaseContainer.classList.remove('active', 'fast-fade');
-            showcaseWrapper.classList.remove('pop-in', 'pop-out', 'inspecting');
-
-            if (typeof sfxIdle !== 'undefined') sfxIdle.pause();
-
-            const videoSrc = PROMO_VIDEOS[currentPromoIdx % PROMO_VIDEOS.length];
-            currentPromoIdx++;
-
-            promoVideo.src = videoSrc;
-            promoVideo.load();
-            promoVideoOverlay.classList.add('active');
-
-            const playPromise = promoVideo.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(err => {
-                    console.warn("Video oynatılamadı veya dosya yok, sergiye dönülüyor:", err);
-                    endPromoVideoAndRestartShowcase();
+                .catch((err) => {
+                    console.error("Kısa ID okuma hatası:", err);
+                    showNotFound();
                 });
-            }
+        } else if (imageUrl) {
+            initCardActions();
+        } else {
+            showNotFound();
         }
 
-        function endPromoVideoAndRestartShowcase() {
-            promoVideo.pause();
-            promoVideoOverlay.classList.remove('active');
-            isPromoVideoPlaying = false;
-            console.log("🎬 Video bitti veya kapatıldı. Kart sergisine dönülüyor...");
+        // 3D Parallax
+        const wrapper = document.getElementById('card-wrapper');
+        const frame = document.getElementById('image-frame');
+        const glare = document.getElementById('holo-glare');
 
-            if (selectionState === 0) {
-                if (typeof sfxIdle !== 'undefined') sfxIdle.play().catch(e => {});
-                refreshCardsFromRecords();
-                startAttractMode();
-            }
-        }
-
-        promoVideo.addEventListener('ended', endPromoVideoAndRestartShowcase);
-        promoVideo.addEventListener('error', endPromoVideoAndRestartShowcase);
-
-        function stopAttractIntervalsOnly() {
-            if(attractTextInterval) { clearInterval(attractTextInterval); attractTextInterval = null; }
-            if(attractShowcaseInterval) { clearInterval(attractShowcaseInterval); attractShowcaseInterval = null; }
-        }
-
-        function stopAttractMode() {
-            stopAttractIntervalsOnly();
-            if(promoVideoTimer) { clearTimeout(promoVideoTimer); promoVideoTimer = null; }
-            isPromoVideoPlaying = false;
-            promoVideo.pause();
-            promoVideoOverlay.classList.remove('active');
-            showcaseContainer.classList.remove('active', 'fast-fade');
-            showcaseWrapper.classList.remove('pop-in', 'pop-out', 'inspecting');
-            insertCoinText.innerText = "PARA ATIN VE BAŞLAYIN";
-            insertCoinText.style.color = "var(--waffle-cream)";
-            insertCoinText.style.opacity = 1;
-            insertCoinText.style.animation = "blink 1s step-end infinite";
-        }
-
-        function switchScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-        }
-
-        function renderSelectionUI() {
-            if (selectionState === 0) {
-                selectionGuide.innerHTML = `
-                    <div class="style-option" style="animation-delay: 0.0s"><span class="btn-color btn-yellow">SARI</span> WAFFLE CANAVARI</div>
-                    <div class="style-option" style="animation-delay: 0.1s"><span class="btn-color btn-red">KIRMIZI</span> POPSTAR</div>
-                    <div class="style-option" style="animation-delay: 0.2s"><span class="btn-color btn-blue">MAVİ</span> KNIGHT</div>
-                `;
-                kvkkBox.style.display = 'none';
-                mirrorBox.style.display = 'none';
-                attractMarquee.style.display = 'block';
-                stopCamera();
-                startAttractMode();
-            } 
-            else if (selectionState === 1) {
-                stopAttractMode();
-                stopCamera();
-                attractMarquee.style.display = 'none';
-                mirrorBox.style.display = 'none';
-                kvkkBox.style.display = 'flex';
-
-                insertCoinText.style.animation = "none";
-                insertCoinText.innerText = "DEVAM ETMEK İÇİN KVKK METNİNİ ONAYLAYIN";
-                insertCoinText.style.color = "#ffffff";
-
-                selectionGuide.innerHTML = `
-                    <div class="style-option" style="animation-delay: 0.0s;">
-                        <span class="btn-color btn-yellow">SARI</span>
-                        <span class="btn-color btn-red">KIRMIZI</span>
-                        <span class="btn-color btn-blue">MAVİ</span>
-                        ONAYLIYORUM VE BAŞLA
-                    </div>
-                `;
-            } 
-            else if (selectionState === 2) {
-                kvkkBox.style.display = 'none';
-                attractMarquee.style.display = 'none';
-                mirrorBox.style.display = 'block';
-                startCamera();
-
-                insertCoinText.style.animation = "none";
-                insertCoinText.innerText = "1. ADIM: KARAKTERİNİ SEÇ";
-                insertCoinText.style.color = "var(--waffle-berry)";
-                selectionGuide.innerHTML = `
-                    <div class="style-option" style="animation-delay: 0.0s"><span class="btn-color btn-yellow">SARI</span> WAFFLE CANAVARI</div>
-                    <div class="style-option" style="animation-delay: 0.1s"><span class="btn-color btn-red">KIRMIZI</span> POPSTAR</div>
-                    <div class="style-option" style="animation-delay: 0.2s"><span class="btn-color btn-blue">MAVİ</span> KNIGHT</div>
-                `;
-            } 
-            else if (selectionState === 3) {
-                kvkkBox.style.display = 'none';
-                attractMarquee.style.display = 'none';
-                mirrorBox.style.display = 'block';
-                startCamera();
-
-                insertCoinText.innerText = "2. ADIM: ÇİZİM TARZINI SEÇ";
-                insertCoinText.style.color = "var(--waffle-gold)";
-                selectionGuide.innerHTML = `
-                    <div class="style-option" style="animation-delay: 0.0s"><span class="btn-color btn-yellow">SARI</span> WEBTOON</div>
-                    <div class="style-option" style="animation-delay: 0.1s"><span class="btn-color btn-red">KIRMIZI</span> CINEMA</div>
-                    <div class="style-option" style="animation-delay: 0.2s"><span class="btn-color btn-blue">MAVİ</span> FANTASY</div>
-                `;
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.repeat) return;
-
-            const now = Date.now();
-            if (now - lastKeyPressTime < 350) return;
+        function handleMove(x, y) {
+            const rect = wrapper.getBoundingClientRect();
+            const mouseX = x - (rect.left + rect.width / 2); 
+            const mouseY = y - (rect.top + rect.height / 2);
             
-            if (selectionState === 4 || processingScreen.classList.contains('active') || showingScreen.classList.contains('active')) return;
-
-            if (selectionState === 1 && (e.key === '1' || e.key === '2' || e.key === '3')) {
-                lastKeyPressTime = now;
-                selectionState = 2;
-                renderSelectionUI();
-                sfxBeep.currentTime = 0; sfxBeep.play().catch(err => {});
-            }
-            else if (selectionState === 2 && THEME_MAP[e.key]) {
-                lastKeyPressTime = now;
-                chosenTheme = THEME_MAP[e.key];
-                selectionState = 3;
-                renderSelectionUI();
-                sfxBeep.currentTime = 0; sfxBeep.play().catch(err => {});
-            } 
-            else if (selectionState === 3 && STYLE_MAP[e.key]) {
-                lastKeyPressTime = now;
-                chosenStyle = STYLE_MAP[e.key];
-                selectionState = 4;
-                sfxBeep.currentTime = 0; sfxBeep.play().catch(err => {});
-                startLocalCountdown();
-            }
-        });
-
-        function startLocalCountdown() {
-            sfxIdle.pause(); sfxIdle.currentTime = 0;
-            styleDisplay.innerText = "STİL: " + (THEME_DISPLAY_NAMES[chosenTheme] || chosenTheme.toUpperCase()) + " x " + STYLE_DISPLAY_NAMES[chosenStyle];
-            insertCoinText.style.opacity = '0';
+            const rotateX = (-mouseY / (rect.height / 2)) * 25; 
+            const rotateY = (mouseX / (rect.width / 2)) * 25;
+            frame.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
             
-            let count = 3;
-            countdownDisplay.style.fontSize = "8rem"; countdownDisplay.innerText = count; countdownDisplay.style.display = 'block';
-
-            setTimeout(() => { sfxBeep.currentTime = 0; sfxBeep.play().catch(e => {}); }, 10);
-
-            let countInterval = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    countdownDisplay.innerText = count;
-                    setTimeout(() => { sfxBeep.currentTime = 0; sfxBeep.play().catch(e => {}); }, 10);
-                } else if (count === 0) {
-                    countdownDisplay.style.fontSize = "4rem"; countdownDisplay.innerText = "GÜLÜMSE!";
-                } else {
-                    clearInterval(countInterval);
-                    sfxShutter.currentTime = 0; sfxShutter.play().catch(e => {});
-                    countdownDisplay.style.display = 'none'; countdownDisplay.style.fontSize = "8rem"; insertCoinText.style.opacity = '1'; 
-                    triggerFlash();
-
-                    const video = document.getElementById('live-stream');
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoHeight;
-                    canvas.height = video.videoWidth;
-                    const ctx = canvas.getContext('2d');
-                    ctx.translate(canvas.width / 2, canvas.height / 2);
-                    ctx.scale(-1, 1); 
-                    ctx.rotate(-90 * Math.PI / 180); 
-                    ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
-                    const imageData = canvas.toDataURL('image/jpeg', 0.9);
-
-                    stopCamera();
-
-                    switchScreen('processing-screen');
-                    startLoadingShow();
-                    if (typeof sfxIdle !== 'undefined') sfxIdle.play().catch(e => {});
-                    
-                    socket.emit('capture_now', { theme: chosenTheme, style: chosenStyle, image_data: imageData });
-                }
-            }, 1000); 
+            if (cutoutElement) {
+                const charMoveX = (mouseX / (rect.width / 2)) * -12; 
+                const charMoveY = (mouseY / (rect.height / 2)) * -12; 
+                cutoutElement.style.transform = `translateZ(25px) translateX(${charMoveX}px) translateY(${charMoveY}px) scale(1.05)`;
+            }
+            const glareX = ((x - rect.left) / rect.width) * 100; 
+            const glareY = ((y - rect.top) / rect.height) * 100;
+            glare.style.opacity = '0.65';
+            glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.85) 0%, rgba(226,102,163,0.35) 30%, rgba(226,102,163,0.15) 60%, transparent 80%)`;
         }
 
-        function startLoadingShow() {
-            let i = 0, percent = 0;
-            dynamicText.innerText = loadingMessages[0]; progressBar.style.width = "0%";
-            slotTrack.classList.remove('stopped');
-            slotTrack.style.transform = "none";
-            messageInterval = setInterval(() => { i = (i + 1) % loadingMessages.length; dynamicText.innerText = loadingMessages[i]; }, 1800); 
-            progressInterval = setInterval(() => { if(percent < 90) { percent += Math.random() * 5 + 2; if(percent > 90) percent = 90; progressBar.style.width = percent + "%"; } }, 500);
+        function resetCard() {
+            frame.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            glare.style.opacity = '0';
+            if (cutoutElement) { cutoutElement.style.transform = `translateZ(25px) translateX(0px) translateY(0px) scale(1.05)`; }
         }
 
-        function stopLoadingShow() { clearInterval(messageInterval); clearInterval(progressInterval); }
-        function triggerFlash() { flashOverlay.style.opacity = '1'; setTimeout(() => { flashOverlay.style.opacity = '0'; }, 150); }
-
-        // 🔥 BÜYÜK VE NET QR KOD ÜRETİCİ (130x130px)
-        function renderQRCode(qrLink) {
-            qrcodeBox.innerHTML = ""; 
-            new QRCode(qrcodeBox, { 
-                text: qrLink, 
-                width: 130, 
-                height: 130, 
-                colorDark : "#000000", 
-                colorLight : "#ffffff", 
-                correctLevel : QRCode.CorrectLevel.L 
-            });
-        }
-
-        socket.on('rarity_result', function(data) {
-            slotTrack.classList.add('stopped');
-            const offsets = { 'common': 0, 'uncommon': -100, 'rare': -200, 'promo': -300 };
-            slotTrack.style.transform = `translateY(${offsets[data.rarity] || 0}px)`;
-            resultImage.className = "";
-            resultImage.classList.add(`rarity-${data.rarity}`);
-
-            if (data.rarity === 'promo' || data.rarity === 'rare') {
-                setTimeout(() => { triggerFlash(); sfxSuccess.play().catch(e => {}); }, 600);
-            }
-        });
-
-        socket.on('update_marquee', function(data) {
-            if (!data || !data.cards || data.cards.length === 0) return;
-            populateMarqueeCards(data.cards);
-
-            if(selectionState === 0 && !isPromoVideoPlaying && !promoVideoTimer) {
-                startAttractMode();
-            }
-        });
-
-        socket.on('kredi_eklendi', function(data) {
-            if (typeof sfxCoin !== 'undefined') sfxCoin.play().catch(e => {}); 
-            if (creditDisplay) creditDisplay.innerText = "KREDİ: " + data.kredi;
-            
-            if (selectionState === 0) {
-                selectionState = 1;
-                renderSelectionUI();
-            }
-        });
-
-        socket.on('hardware_status', function(data) {
-            if (data.connected) { maintenanceOverlay.style.display = 'none'; } 
-            else { maintenanceOverlay.style.display = 'flex'; if (typeof sfxIdle !== 'undefined') sfxIdle.pause(); }
-        });
-
-        socket.on('show_hold_progress', function(data) {
-            if (data.holding) { holdBar.classList.add('animating'); } 
-            else { holdBar.classList.remove('animating'); }
-        });
-
-        socket.on('state_update', function(data) {
-            if (data.kredi !== undefined && creditDisplay) {
-                creditDisplay.innerText = "KREDİ: " + data.kredi;
-            }
-
-            if (data.state === 'IDLE') {
-                if (typeof sfxIdle !== 'undefined') sfxIdle.play().catch(e => {});
-                stopLoadingShow(); 
-                resultImage.classList.remove('loaded'); 
-                resultImage.src = ""; 
-                qrcodeBox.innerHTML = '<div id="qr-loading" class="qr-placeholder">HAZIRLANIYOR</div>';
-                holdBar.classList.remove('animating'); 
-                
-                selectionState = 0;
-                chosenTheme = "";
-                chosenStyle = "";
-                
-                stopCamera();
-                stopAttractMode();
-                refreshCardsFromRecords();
-                renderSelectionUI();
-                switchScreen('idle-screen');
-            } 
-            else if (data.state === 'WAIT_SELECTION') {
-                if (typeof sfxBeep !== 'undefined') sfxBeep.play().catch(e => {});
-                stopLoadingShow(); 
-                resultImage.classList.remove('loaded'); 
-                resultImage.src = ""; 
-                qrcodeBox.innerHTML = '<div id="qr-loading" class="qr-placeholder">HAZIRLANIYOR</div>';
-                holdBar.classList.remove('animating'); 
-                
-                selectionState = 1;
-                chosenTheme = "";
-                chosenStyle = "";
-
-                renderSelectionUI();
-                switchScreen('idle-screen');
-            } 
-            else if (data.state === 'PROCESSING') {
-                switchScreen('processing-screen');
-            }
-            else if (data.state === 'SHOWING') {
-                if (typeof sfxIdle !== 'undefined') sfxIdle.pause();
-                stopLoadingShow(); 
-                progressBar.style.width = "100%"; 
-                sfxSuccess.currentTime = 0; 
-                sfxSuccess.play().catch(e => {});
-                stopCamera();
-                
-                setTimeout(() => {
-                    switchScreen('showing-screen');
-                    resultImage.src = data.image_url;
-                    resultImage.onload = function() { resultImage.classList.add('loaded'); }
-                }, 500);
-            }
-        });
-
-        socket.on('qr_ready', function(data) {
-            if (data.qr_data) { renderQRCode(data.qr_data); }
-        });
-
-        window.addEventListener('load', () => { 
-            if (typeof sfxIdle !== 'undefined') sfxIdle.play().catch(e => {}); 
-            refreshCardsFromRecords();
-            startAttractMode(); 
-        });
+        wrapper.addEventListener('touchmove', (e) => { if (e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY); });
+        wrapper.addEventListener('touchend', resetCard);
+        wrapper.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+        wrapper.addEventListener('mouseleave', resetCard);
     </script>
 </body>
 </html>
